@@ -10,8 +10,7 @@ CONFIG += c++14
 
 SOURCES += \
     main.cpp \
-    mainwindow.cpp \
-    processor.cpp
+    mainwindow.cpp
 
 HEADERS += \
     mainwindow.h \

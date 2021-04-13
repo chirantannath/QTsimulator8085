@@ -23,7 +23,11 @@ furnished to do so, subject to the following conditions:
 #define PROCESSOR_H
     
 #include <QObject>
+#include <QMetaType>
+#include <functional>
+#include <utility>
 #include <cstdint>
+#include <cstring>
 
 /// Data type 8-bit for 8085.
 typedef uint_least8_t   data8_t; //"least" to optimise memory consumption (depends on target architecture)
@@ -43,7 +47,7 @@ typedef data16_t        memaddr_t;
 typedef uint_fast32_t   memsize_t;
 /// Memory size (in units of data8_t blocks) accessible to this processor. The current implementation uses all 65536
 /// bytes of the memory address space.
-#define MEMORY_SIZE     ((memsize_t)0x10000)
+#define MEMORY_SIZE     ((memsize_t)0x10000u)
 
 /// Type for the flag register, exactly the same as data8_t.
 typedef data8_t         flags_t;
@@ -61,7 +65,7 @@ typedef data8_t         flags_t;
 //QT_BEGIN_NAMESPACE
 ///Utility functions.
 namespace {
-#define PACK(higher, lower) (data16_t)((((higher) << 8) | (lower)) & 0xFFFFu)
+#define PACK(higher, lower) ((((higher) << 8) | (lower)) & 0xFFFFu)
 #define UNPACK(higher, lower, src) {(higher) = ((src) >> 8) & 0xFFu; (lower) = (src) & 0xFFu;}
 }
 //QT_END_NAMESPACE
@@ -70,7 +74,34 @@ namespace {
 class Processor : public QObject
 {
     Q_OBJECT
-    
+    Q_PROPERTY(data8_t accumulator MEMBER a READ getAccumulator WRITE setAccumulator 
+               RESET resetAccumulator NOTIFY accumulatorChanged)
+    Q_PROPERTY(data8_t bRegister MEMBER b READ getBRegister WRITE setBRegister
+               RESET resetBRegister NOTIFY registerBChanged)
+    Q_PROPERTY(data8_t cRegister MEMBER c READ getCRegister WRITE setCRegister
+               RESET resetCRegister NOTIFY registerCChanged)
+    Q_PROPERTY(data8_t dRegister MEMBER d READ getDRegister WRITE setDRegister
+               RESET resetDRegister NOTIFY registerDChanged)
+    Q_PROPERTY(data8_t eRegister MEMBER e READ getERegister WRITE setERegister
+               RESET resetERegister NOTIFY registerEChanged)
+    Q_PROPERTY(flags_t flags MEMBER f READ getFlags WRITE setFlags
+               RESET resetFlags NOTIFY flagsChanged)
+    Q_PROPERTY(data8_t hRegister MEMBER h READ getHRegister WRITE setHRegister
+               RESET resetHRegister NOTIFY registerHChanged)
+    Q_PROPERTY(data8_t lRegister MEMBER l READ getLRegister WRITE setLRegister
+               RESET resetLRegister NOTIFY registerLChanged)
+    Q_PROPERTY(data8_t M READ getM WRITE setM NOTIFY MChanged STORED false)
+    Q_PROPERTY(data16_t bcRegisterPair READ getBCRegisterPair WRITE setBCRegisterPair
+               RESET resetBCRegisterPair STORED false)
+    Q_PROPERTY(data16_t deRegisterPair READ getDERegisterPair WRITE setDERegisterPair
+               RESET resetDERegisterPair STORED false)
+    Q_PROPERTY(data16_t hlRegisterPair READ getHLRegisterPair WRITE setHLRegisterPair
+               RESET resetHLRegisterPair STORED false)
+    Q_PROPERTY(memaddr_t programCounter MEMBER pc READ getProgramCounter WRITE setProgramCounter
+               RESET resetProgramCounter NOTIFY programCounterChanged)
+    Q_PROPERTY(memaddr_t stackPointer MEMBER sp READ getStackPointer WRITE setStackPointer
+               RESET resetStackPointer NOTIFY stackPointerChanged)
+        
     ///All memory of the 8085.
     data8_t memory[MEMORY_SIZE];
     ///Accumulator register
@@ -84,36 +115,189 @@ class Processor : public QObject
     
     data8_t e;
     
-    data8_t f;
+    flags_t f;
     
     data8_t h;
     
     data8_t l;
     
-public:
-    explicit Processor(QObject *parent = nullptr) : QObject(parent) {}
+    memaddr_t pc;
     
+    memaddr_t sp;
+    
+    std::function<void()> microprograms[256];
+public:
+    
+    explicit Processor(QObject *parent = nullptr) : QObject(parent) {
+        memset(memory, 0, sizeof(memory));
+        a = b = c = d = e = h = l = 0; f = 0;
+        
+        microprograms[0x2Fu] = [&] () {
+            a = ~a & 0xFFu; emit accumulatorChanged();
+            pc++; pc &= 0xFFu; emit programCounterChanged();
+        }; //A sample.
+    }
+    
+    data8_t getAccumulator() const {return a;}
+    
+    data8_t getBRegister() const {return b;}
+    
+    data8_t getCRegister() const {return c;}
+    
+    data8_t getDRegister() const {return d;}
+    
+    data8_t getERegister() const {return e;}
+    
+    flags_t getFlags() const {return f;}
+    
+    data8_t getHRegister() const {return h;}
+    
+    data8_t getLRegister() const {return l;}
+    
+    data8_t getM() const {return memory[PACK(h, l)];}
+    
+    data16_t getBCRegisterPair() const {return PACK(b, c);}
+    
+    data16_t getDERegisterPair() const {return PACK(d, e);}
+    
+    data16_t getHLRegisterPair() const {return PACK(h, l);}
+    
+    memaddr_t getProgramCounter() const {return pc;}
+    
+    memaddr_t getStackPointer() const {return sp;}
+    
+    void copyTo(data8_t *const dest, memaddr_t startLoc, memsize_t length) const {
+        memaddr_t srcAddr; memsize_t destLoc;
+        for(srcAddr = startLoc, destLoc = 0; destLoc < length; srcAddr++, srcAddr &= 0xFFFFu, destLoc++)
+            dest[destLoc] = memory[srcAddr];
+    }
+    
+    void overwrite(const data8_t *const src, memaddr_t startLoc, memsize_t length) {
+        memaddr_t destAddr; memsize_t srcLoc;
+        memsize_t minAddr = startLoc, maxAddr = startLoc;
+        for(destAddr = startLoc, srcLoc = 0; srcLoc < length; destAddr++, destAddr &= 0xFFFFu, srcLoc++) {
+            memory[destAddr] = src[srcLoc] & 0xFFu;
+            if(minAddr > destAddr) minAddr = destAddr;
+            if(maxAddr < destAddr) maxAddr = destAddr;
+        }
+        emit memoryBlockUpdated(minAddr, maxAddr - minAddr + 1u);
+    }
 public slots:
     
-    void runFull(); //currently this is a no-op
+    void runFull() {} //currently this is a no-op
     
-    void setARegister(data8_t);
+    void setAccumulator(data8_t value) {a = value & 0xFFu; emit accumulatorChanged();}
     
-    void setBRegister(data8_t);
+    void setBRegister(data8_t value) {b = value & 0xFFu; emit registerBChanged();}
     
-    void setCRegister(data8_t);
+    void setCRegister(data8_t value) {c = value & 0xFFu; emit registerCChanged();}
     
-    void setDRegister(data8_t);
+    void setDRegister(data8_t value) {d = value & 0xFFu; emit registerDChanged();}
     
-    void setERegister(data8_t);
+    void setERegister(data8_t value) {e = value & 0xFFu; emit registerEChanged();}
     
-    void setFlags(data8_t);
+    void setFlags(flags_t flags) {
+        f = flags & (ZERO_FLAG | SIGN_FLAG | PARITY_FLAG | CARRY_FLAG | AUXILIARY_CARRY_FLAG) & 0xFFu; 
+        emit flagsChanged();
+    }
     
-    void setHRegister(data8_t);
+    void setHRegister(data8_t value) {h = value & 0xFFu; emit registerHChanged(); emit MChanged();}
     
-    void setLRegister(data8_t);
+    void setLRegister(data8_t value) {l = value & 0xFFu; emit registerLChanged(); emit MChanged();}
+    
+    void setM(data8_t value) {memory[PACK(h, l)] = value & 0xFFu; emit MChanged();}
+    
+    void setBCRegisterPair(data16_t value) {
+        UNPACK(b, c, value & 0xFFFFu); 
+        emit registerBChanged(); 
+        emit registerCChanged();
+    }
+    
+    void setDERegisterPair(data16_t value) {
+        UNPACK(d, e, value & 0xFFFFu);
+        emit registerDChanged();
+        emit registerEChanged();
+    }
+    
+    void setHLRegisterPair(data16_t value) {
+        UNPACK(h, l, value & 0xFFFFu);
+        emit registerHChanged();
+        emit registerLChanged();
+        emit MChanged();
+    }
+    
+    void setProgramCounter(memaddr_t value) {pc = value & 0xFFFFu; emit programCounterChanged();}
+    
+    void setStackPointer(memaddr_t value) {sp = value & 0xFFFFu; emit stackPointerChanged();}
+    
+    void resetAccumulator() {setAccumulator(0u);}
+    
+    void resetBRegister() {setBRegister(0u);}
+    
+    void resetCRegister() {setCRegister(0u);}
+    
+    void resetDRegister() {setDRegister(0u);}
+    
+    void resetERegister() {setERegister(0u);}
+    
+    void resetFlags() {setFlags(0u);}
+    
+    void resetHRegister() {setHRegister(0u);}
+    
+    void resetLRegister() {setLRegister(0u);}
+    
+    void resetBCRegisterPair() {setBRegister(0u); setCRegister(0u);}
+    
+    void resetDERegisterPair() {setDRegister(0u); setERegister(0u);}
+    
+    void resetHLRegisterPair() {setHRegister(0u); setLRegister(0u);}
+    
+    void resetProgramCounter() {setProgramCounter(0u);}
+    
+    void resetStackPointer() {setStackPointer(0u);}
+    
+    void resetMemory() {
+        memset(memory, 0, sizeof(memory)); 
+        emit memoryBlockUpdated(0u, MEMORY_SIZE); 
+        emit MChanged();
+    }
 signals:
-
+    
+    void accumulatorChanged();
+    
+    void registerBChanged();
+    
+    void registerCChanged();
+    
+    void registerDChanged();
+    
+    void registerEChanged();
+    
+    void flagsChanged();
+    
+    void registerHChanged();
+    
+    void registerLChanged();
+    
+    void programCounterChanged();
+    
+    void stackPointerChanged();
+    
+    void MChanged();
+    
+    void memoryBlockUpdated(memaddr_t startLoc, memsize_t blockSize);
 };
+
+namespace processor_h {
+inline void registerHeaderMetaTypes() {
+    qRegisterMetaType<data8_t>("data8_t");
+    qRegisterMetaType<data8_calc_t>("data8_calc_t");
+    qRegisterMetaType<data16_t>("data16_t");
+    qRegisterMetaType<data16_calc_t>("data16_calc_t");
+    qRegisterMetaType<memaddr_t>("memaddr_t");
+    qRegisterMetaType<memsize_t>("memsize_t");
+    qRegisterMetaType<flags_t>("flags_t");
+}
+}
 
 #endif // PROCESSOR_H
