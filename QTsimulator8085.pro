@@ -14,6 +14,7 @@ SOURCES += \
 
 HEADERS += \
     mainwindow.h \
+    opcodes.h \
     processor.h
 
 FORMS += \
