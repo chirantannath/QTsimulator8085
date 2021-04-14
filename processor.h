@@ -79,50 +79,65 @@ class Processor : public QObject
     /*These are property definitions; required for interoperability with Qt. Consider "The Property System" in Qt 
       Documentation.*/    
     ///Accumulator register
-    Q_PROPERTY(data8_t accumulator MEMBER a READ getAccumulator WRITE setAccumulator 
-               RESET resetAccumulator NOTIFY accumulatorChanged)
+    Q_PROPERTY(data8_t accumulator MEMBER a READ getAccumulator NOTIFY accumulatorChanged)
     ///Register B
-    Q_PROPERTY(data8_t bRegister MEMBER b READ getBRegister WRITE setBRegister
-               RESET resetBRegister NOTIFY registerBChanged)
+    Q_PROPERTY(data8_t bRegister MEMBER b READ getBRegister NOTIFY registerBChanged)
     ///Register C
-    Q_PROPERTY(data8_t cRegister MEMBER c READ getCRegister WRITE setCRegister
-               RESET resetCRegister NOTIFY registerCChanged)
+    Q_PROPERTY(data8_t cRegister MEMBER c READ getCRegister NOTIFY registerCChanged)
     ///Register D
-    Q_PROPERTY(data8_t dRegister MEMBER d READ getDRegister WRITE setDRegister
-               RESET resetDRegister NOTIFY registerDChanged)
+    Q_PROPERTY(data8_t dRegister MEMBER d READ getDRegister NOTIFY registerDChanged)
     ///Register E
-    Q_PROPERTY(data8_t eRegister MEMBER e READ getERegister WRITE setERegister
-               RESET resetERegister NOTIFY registerEChanged)
+    Q_PROPERTY(data8_t eRegister MEMBER e READ getERegister NOTIFY registerEChanged)
     ///Flags (register F)
-    Q_PROPERTY(flags_t flags MEMBER f READ getFlags WRITE setFlags
-               RESET resetFlags NOTIFY flagsChanged)
+    Q_PROPERTY(flags_t flags MEMBER f READ getFlags NOTIFY flagsChanged)
     ///Register H
-    Q_PROPERTY(data8_t hRegister MEMBER h READ getHRegister WRITE setHRegister
-               RESET resetHRegister NOTIFY registerHChanged)
+    Q_PROPERTY(data8_t hRegister MEMBER h READ getHRegister NOTIFY registerHChanged)
     ///Register L
-    Q_PROPERTY(data8_t lRegister MEMBER l READ getLRegister WRITE setLRegister
-               RESET resetLRegister NOTIFY registerLChanged)
+    Q_PROPERTY(data8_t lRegister MEMBER l READ getLRegister NOTIFY registerLChanged)
     ///Pseudo register M
-    Q_PROPERTY(data8_t M READ getM WRITE setM NOTIFY MChanged STORED false)
+    Q_PROPERTY(data8_t M READ getM NOTIFY MChanged)
     ///Program status word (register pair AF)
-    Q_PROPERTY(data16_t programStatusWord READ getProgramStatusWord WRITE setProgramStatusWord
-               RESET resetProgramStatusWord STORED false)
+    Q_PROPERTY(data16_t programStatusWord READ getProgramStatusWord STORED false)
     ///Register pair BC
-    Q_PROPERTY(data16_t bcRegisterPair READ getBCRegisterPair WRITE setBCRegisterPair
-               RESET resetBCRegisterPair STORED false)
+    Q_PROPERTY(data16_t bcRegisterPair READ getBCRegisterPair STORED false)
     ///Register pair DE
-    Q_PROPERTY(data16_t deRegisterPair READ getDERegisterPair WRITE setDERegisterPair
-               RESET resetDERegisterPair STORED false)
+    Q_PROPERTY(data16_t deRegisterPair READ getDERegisterPair STORED false)
     ///Register pair HL
-    Q_PROPERTY(data16_t hlRegisterPair READ getHLRegisterPair WRITE setHLRegisterPair
-               RESET resetHLRegisterPair STORED false)
+    Q_PROPERTY(data16_t hlRegisterPair READ getHLRegisterPair STORED false)
     ///Program counter register
-    Q_PROPERTY(memaddr_t programCounter MEMBER pc READ getProgramCounter WRITE setProgramCounter
-               RESET resetProgramCounter NOTIFY programCounterChanged)
+    Q_PROPERTY(memaddr_t programCounter MEMBER pc READ getProgramCounter NOTIFY programCounterChanged)
     ///Stack pointer register
-    Q_PROPERTY(memaddr_t stackPointer MEMBER sp READ getStackPointer WRITE setStackPointer
-               RESET resetStackPointer NOTIFY stackPointerChanged)
-        
+    Q_PROPERTY(memaddr_t stackPointer MEMBER sp READ getStackPointer NOTIFY stackPointerChanged)
+    ///Interrupt enable latch
+    Q_PROPERTY(bool IE READ isInterruptEnabled NOTIFY interruptEnableStatusChanged)
+    ///Interrupt request flag/latch
+    Q_PROPERTY(bool INTR READ isInterruptRequested WRITE setInterruptRequest)
+    ///Interrupt acknowledge flag/latch
+    Q_PROPERTY(bool INTA READ isInterruptAcknowledged NOTIFY interruptAcknowledgeStatusChanged)
+    ///Interrupt Service Routine vector instruction to execute on INTR (is always one of the RST instructions)
+    Q_PROPERTY(data8_t INTRVector READ getINTRVector WRITE setINTRVector)
+    ///TRAP interrupt flag/latch
+    Q_PROPERTY(bool TRAP READ isTRAPRequested WRITE setTRAPRequest)
+    ///RST 7.5 interrupt flag/latch
+    Q_PROPERTY(bool RST7_5 READ isRestart7_5Requested WRITE setRestart7_5Request NOTIFY restart7_5RequestStatusChanged)
+    ///RST 6.5 interrupt flag/latch
+    Q_PROPERTY(bool RST6_5 READ isRestart6_5Requested WRITE setRestart6_5Request)
+    ///RST 5.5 interrupt flag/latch
+    Q_PROPERTY(bool RST5_5 READ isRestart5_5Requested WRITE setRestart5_5Request)
+    ///RST 7.5 Mask latch (1 if disabled)
+    Q_PROPERTY(bool M7_5 READ maskRestart7_5 NOTIFY maskRestart7_5Changed)
+    ///RST 6.5 Mask latch (1 if disabled)
+    Q_PROPERTY(bool M6_5 READ maskRestart6_5 NOTIFY maskRestart6_5Changed)
+    ///RST 5.5 Mask latch (1 if disabled)
+    Q_PROPERTY(bool M5_5 READ maskRestart5_5 NOTIFY maskRestart5_5Changed)
+    ///Serial output data latch
+    Q_PROPERTY(bool SOD READ serialOutputDataLatch NOTIFY serialOutput)
+    ///Serial input data latch
+    Q_PROPERTY(bool SID READ serialInputDataLatch WRITE setSerialInputLatch)
+    
+    ///Code to be executed for each opcode (first byte; all 256 combinations). Consider this to be the micro-program
+    ///memory for the 8085, if it was modelled in a microprogrammed approach.
+    std::function<void()> microprograms[256];
     ///All memory of the 8085.
     data8_t memory[MEMORY_SIZE];
     ///Accumulator register
@@ -145,20 +160,50 @@ class Processor : public QObject
     memaddr_t pc;
     ///Stack pointer register
     memaddr_t sp;
-    ///Code to be executed for each opcode (first byte; all 256 combinations). Consider this to be the micro-program
-    ///memory for the 8085, if it was modelled in a microprogrammed approach.
-    std::function<void()> microprograms[256];
+    ///Interrupt enable flag.
+    unsigned ie : 1;
+    ///INTR signal flag.
+    unsigned intr : 1;
+    ///Interrupt Acknowledge latch.
+    unsigned inta : 1;
+    ///Reset location for INTR signal (0 to 7 for RST 0 to 7).
+    unsigned intrVec : 3;
+    ///TRAP interrupt flag.
+    unsigned trap : 1;
+    ///RST 7.5 interrupt latch; reset on RESET_IN or by bit D4 of accumulator when SIM is executed.
+    unsigned rst7_5 : 1;
+    ///RST 6.5 interrupt latch.
+    unsigned rst6_5 : 1;
+    ///RST 5.5 interrupt latch.
+    unsigned rst5_5 : 1;
+    ///RST 7_5 interrupt mask latch (0 if enabled).
+    unsigned m7_5 : 1;
+    ///RST 6_5 interrupt mask latch (0 if enabled).
+    unsigned m6_5 : 1;
+    ///RST 5_5 interrupt mask latch (0 if enabled).
+    unsigned m5_5 : 1;
+    ///Serial output data latch.
+    unsigned sod : 1;
+    ///Serial input data latch.
+    unsigned sid : 1;
 public:
     /// Initializes this processor. All data storage locations (memory and all registers) are set to 0.
     explicit Processor(QObject *parent = nullptr) : QObject(parent) {
         memset(memory, 0, sizeof(memory));
-        a = b = c = d = e = h = l = 0; f = 0;
+        pc = sp = 0u;
+        a = b = c = d = e = h = l = 0u; f = 0u; ie = intr = inta = trap = rst7_5 = rst6_5 = rst5_5 = sod = sid = 0u;
+        m5_5 = m6_5 = m7_5 = 1u; //Initial state is these external interrupts are masked.
         
-        microprograms[0x2Fu] = [&] () {//0x2Fu == CMA (complement accumulator)
+        //Insert instruction codes here
+        microprograms[0x00u] = [&](){pc++; pc &= 0xFFFFu; emit programCounterChanged();};
+        
+        microprograms[0x2Fu] = [&](){//CMA (complement accumulator)
             a = ~a & 0xFFu; emit accumulatorChanged();
-            pc++; pc &= 0xFFu; emit programCounterChanged();
+            pc++; pc &= 0xFFFFu; emit programCounterChanged();
         }; //A sample.
     }
+    ///Explicit destructor required for proper inheritance to QObject
+    virtual ~Processor() {}
     ///Get the current value of accumulator register
     data8_t getAccumulator() const {return a;}
     ///Get the current value of register B
@@ -189,13 +234,41 @@ public:
     memaddr_t getProgramCounter() const {return pc;}
     ///Get the current value of stack pointer register
     memaddr_t getStackPointer() const {return sp;}
+    ///Get the current value stored in serial input data latch. This is the serial data bit read by RIM instruction.
+    bool serialInputDataLatch() const {return sid;}
+    ///Get the value stored in serial output data latch/last value sent by SIM.
+    bool serialOutputDataLatch() const {return sod;}
+    ///Gets the RST 7.5 mask status (true if disabled).
+    bool maskRestart7_5() const {return m7_5;}
+    ///Gets the RST 6.5 mask status (true if disabled).
+    bool maskRestart6_5() const {return m6_5;}
+    ///Gets the RST 5.5 mask status (true if disabled).
+    bool maskRestart5_5() const {return m5_5;}
+    ///True if RST 7.5 has been requested.
+    bool isRestart7_5Requested() const {return rst7_5;}
+    ///True if RST 6.5 has been requested.
+    bool isRestart6_5Requested() const {return rst6_5;}
+    ///True if RST 5.5 has been requested.
+    bool isRestart5_5Requested() const {return rst5_5;}
+    ///True if TRAP has been requested.
+    bool isTRAPRequested() const {return trap;}
+    ///Returns the RST instruction executed when INTR interrupt is requested.
+    data8_t getINTRVector() const {return (data8_t)((intrVec << 3) | 0xC7u);}
+    ///True if INTR interrupt has been requested.
+    bool isInterruptRequested() const {return intr;}
+    ///True if interrupts are enabled by the processor.
+    bool isInterruptEnabled() const {return ie;}
+    ///True if the last interrupt signal has been acknowledged.
+    bool isInterruptAcknowledged() const {return inta;}
+    ///Gets the data byte stored at the address "index" in the 64K memory of this processor.
+    data8_t getMemoryByte(memaddr_t index) const {return memory[index];}
     ///Copy the current memory contents into dest; starting from startLoc address in this processor and copying length
     ///bytes. Note that while copying, if because of length, the addresses being copied overshoot 0xFFFF, this function
     ///"wraps around" and continues copying from 0x0000. If the destination buffer is smaller than length bytes, the
     ///behaviour is undefined.
     void copyTo(data8_t *const dest, memaddr_t startLoc, memsize_t length) const {
         memaddr_t srcAddr; memsize_t destLoc;
-        for(srcAddr = startLoc, destLoc = 0; destLoc < length; srcAddr++, srcAddr &= 0xFFFFu, destLoc++)
+        for(srcAddr = startLoc & 0xFFFFu, destLoc = 0; destLoc < length; srcAddr++, srcAddr &= 0xFFFFu, destLoc++)
             dest[destLoc] = memory[srcAddr];
     }
     ///Copy the contents of source buffer src into the memory of this processor, starting from startLoc address in this
@@ -204,6 +277,7 @@ public:
     ///buffer is smaller than length bytes, the behaviour is undefined. This fires the memoryBlockUpdated() and
     ///MChanged() signals.
     void overwrite(const data8_t *const src, memaddr_t startLoc, memsize_t length) {
+        startLoc &= 0xFFFFu;
         memaddr_t destAddr; memsize_t srcLoc;
         memsize_t minAddr = startLoc, maxAddr = startLoc;
         for(destAddr = startLoc, srcLoc = 0; srcLoc < length; destAddr++, destAddr &= 0xFFFFu, srcLoc++) {
@@ -221,86 +295,33 @@ public slots:
     void runFull() {} //currently this is a no-op (Implementation required)
     ///Execute exactly 1 instruction pointed to by the current address stored in the program counter register. Multiple
     ///signals may be fired as per the instruction executed. In any case, programCounterChanged() is always fired.
-    void stepNextInstruction() {microprograms[pc]();} //This is a sample. Edit required (external interrupt check, etc.)
-    ///Set the new value of accumulator register. Fires accumulatorChanged() signal.
-    void setAccumulator(data8_t value) {a = value & 0xFFu; emit accumulatorChanged();}
-    ///Set the new value of register B. Fires registerBChanged() signal.
-    void setBRegister(data8_t value) {b = value & 0xFFu; emit registerBChanged();}
-    ///Set the new value of register C. Fires registerCChanged() signal.
-    void setCRegister(data8_t value) {c = value & 0xFFu; emit registerCChanged();}
-    ///Set the new value of register D. Fires registerDChanged() signal.
-    void setDRegister(data8_t value) {d = value & 0xFFu; emit registerDChanged();}
-    ///Set the new value of register E. Fires registerEChanged() signal.
-    void setERegister(data8_t value) {e = value & 0xFFu; emit registerEChanged();}
-    ///Set the flags (new value for register F). Fires flagsChanged() signal.
-    void setFlags(flags_t flags) {
-        f = flags & (ZERO_FLAG | SIGN_FLAG | PARITY_FLAG | CARRY_FLAG | AUXILIARY_CARRY_FLAG) & 0xFFu; 
-        emit flagsChanged();
+    void stepNextInstruction() {
+        microprograms[pc](); //This is a sample. Edit required (external interrupt check, etc.)
     }
-    ///Set the new value of register H. Fires registerHChanged() and MChanged() signals.
-    void setHRegister(data8_t value) {h = value & 0xFFu; emit registerHChanged(); emit MChanged();}
-    ///Set the new value of register L. Fires registerLChanged() and MChanged() signals.
-    void setLRegister(data8_t value) {l = value & 0xFFu; emit registerLChanged(); emit MChanged();}
-    ///Set the new value of pseudo register M. Fires MChanged() signal.
-    void setM(data8_t value) {memory[PACK(h, l)] = value & 0xFFu; emit MChanged();}
-    ///Set the new value of program status word (register pair AF). Fires accumulatorChanged() and flagsChanged()
-    ///signals.
-    void setProgramStatusWord(data16_t value) {
-        UNPACK(a, f, value & 0xFFFFu);
-        emit accumulatorChanged();
-        emit flagsChanged();
+    ///Stores data at the address in the 64K memory of this processor. data is ANDed with 0xFF and address ANDed with
+    ///0xFFFF before any operation is performed. Fires memoryBlockUpdated() and MChanged() signals.
+    void setMemoryByte(memaddr_t address, data8_t data) {
+        address &= 0xFFFFu; data &= 0xFFu;
+        memory[address] = data;
+        emit memoryBlockUpdated(address, 1u);
+        if(address == PACK(h, l)) emit MChanged();
     }
-    ///Set the new value of register pair BC. Fires registerBChanged() and registerCChanged() signals.
-    void setBCRegisterPair(data16_t value) {
-        UNPACK(b, c, value & 0xFFFFu); 
-        emit registerBChanged(); 
-        emit registerCChanged();
-    }
-    ///Set the new value of register pair DE. Fires registerDChanged() and registerEChanged() signals.
-    void setDERegisterPair(data16_t value) {
-        UNPACK(d, e, value & 0xFFFFu);
-        emit registerDChanged();
-        emit registerEChanged();
-    }
-    ///Set the new value of register pair HL. Fires registerHChanged(), registerLChanged() and MChanged() signals.
-    void setHLRegisterPair(data16_t value) {
-        UNPACK(h, l, value & 0xFFFFu);
-        emit registerHChanged();
-        emit registerLChanged();
-        emit MChanged();
-    }
-    ///Set the new value of program counter register. Fires programCounterChanged() signal.
-    void setProgramCounter(memaddr_t value) {pc = value & 0xFFFFu; emit programCounterChanged();}
-    ///Set the new value of stack pointer register. Fires stackPointerChanged() signal.
-    void setStackPointer(memaddr_t value) {sp = value & 0xFFFFu; emit stackPointerChanged();}
-    ///Resets the accumulator register to 0. Fires accumulatorChanged() signal.
-    void resetAccumulator() {setAccumulator(0u);}
-    ///Resets register B to 0. Fires registerBChanged() signal.
-    void resetBRegister() {setBRegister(0u);}
-    ///Resets register C to 0. Fires registerCChanged() signal.
-    void resetCRegister() {setCRegister(0u);}
-    ///Resets register D to 0. Fires registerDChanged() signal.
-    void resetDRegister() {setDRegister(0u);}
-    ///Resets register E to 0. Fires registerEChanged() signal.
-    void resetERegister() {setERegister(0u);}
-    ///Resets all flags (register F) to 0. Fires flagsChanged() signal.
-    void resetFlags() {setFlags(0u);}
-    ///Resets register H to 0. Fires registerHChanged() and MChanged() signals.
-    void resetHRegister() {setHRegister(0u);}
-    ///Resets register L to 0. Fires registerLChanged() and MChanged() signals.
-    void resetLRegister() {setLRegister(0u);}
-    ///Resets program status word (register pair AF) to 0. Fires accumulatorChanged() and flagsChanged() signals.
-    void resetProgramStatusWord() {setAccumulator(0); setFlags(0);}
-    ///Resets BC register pair to 0. Fires registerBChanged() and registerCChanged() signal.
-    void resetBCRegisterPair() {setBRegister(0u); setCRegister(0u);}
-    ///Resets DE register pair to 0. Fires registerDChanged() and registerEChanged() signal.
-    void resetDERegisterPair() {setDRegister(0u); setERegister(0u);}
-    ///Resets HL register pair to 0. Fires registerHChanged(), registerLChanged() and MChanged() signals.
-    void resetHLRegisterPair() {h = l = 0u; emit registerHChanged(); emit registerLChanged(); emit MChanged();}
-    ///Resets program counter register. Fires programCounterChanged() signal.
-    void resetProgramCounter() {setProgramCounter(0u);}
-    ///Resets stack pointer register. Fires stackPointerChanged() signal.
-    void resetStackPointer() {setStackPointer(0u);}
+    ///Sets the value in serial input latch. This is the value read by a subsequent RIM instruction.
+    void setSerialInputLatch(bool flag) {sid = flag ? 1u : 0u;}
+    ///Sets the request status for RST 7.5 (true if interrupt requested). Fires restart7_5RequestStatusChanged() signal.
+    void setRestart7_5Request(bool flag) {rst7_5 = flag ? 1u : 0u; emit restart7_5RequestStatusChanged();}
+    ///Sets the request status for RST 6.5 (true if interrupt requested).
+    void setRestart6_5Request(bool flag) {rst6_5 = flag ? 1u : 0u;}
+    ///Sets the request status for RST 5.5 (true if interrupt requested).
+    void setRestart5_5Request(bool flag) {rst5_5 = flag ? 1u : 0u;}
+    ///Sets the request status for TRAP (true if interrupt requested).
+    void setTRAPRequest(bool flag) {trap = flag ? 1u : 0u;}
+    ///Sets the request status for INTR (true if interrupt requested).
+    void setInterruptRequest(bool flag) {intr = flag ? 1u : 0u;}
+    ///Sets the RST instruction which is executed on INTR interrupt request. Note that only bits D5, D4, D3 are used
+    ///and rest are ignored (the result is the instruction set is always RST 0 through 7).
+    void setINTRVector(data8_t value) {intrVec = (value >> 3) & 7u;}
+    
     ///Resets entire memory to 0 (all 65,536 bytes, may take time). Fires memoryBlockUpdated() and MChanged() signals.
     void resetMemory() {
         memset(memory, 0, sizeof(memory)); 
@@ -308,14 +329,20 @@ public slots:
         emit MChanged();
     }
     ///Resets the entire processor state EXCEPT MEMORY (all registers to 0). This is equivalent to the RESET_IN signal
-    ///to the 8085. Fires accumulatorChanged(), flagsChanged(), registerBChanged(), registerCChanged(), 
-    ///registerDChanged(), registerEChanged(), registerHChanged(), registerLChanged(), programCounterChanged()
-    ///and stackPointerChanged() signals.
+    ///to the 8085. Fires ALL signals EXCEPT memoryBlockUpdated().
     void RESET_IN() {//TODO: Reset must also affect interrupt masks
-        resetProgramStatusWord(); resetBCRegisterPair(); resetDERegisterPair(); resetHLRegisterPair();
-        resetProgramCounter(); resetStackPointer();
+        pc = sp = 0u;
+        a = b = c = d = e = h = l = 0u; f = 0u; ie = sod = inta = rst7_5 = 0u;
+        m5_5 = m6_5 = m7_5 = 1u; //Initial state is these external interrupts are masked.
+        emit accumulatorChanged(); emit registerBChanged(); emit registerCChanged(); emit registerDChanged();
+        emit registerEChanged(); emit registerHChanged(); emit registerLChanged(); emit flagsChanged();
+        emit MChanged(); emit interruptEnableStatusChanged(); emit maskRestart5_5Changed();
+        emit maskRestart6_5Changed(); emit maskRestart7_5Changed(); emit serialOutput();
+        emit programCounterChanged(); emit stackPointerChanged(); emit interruptEnableStatusChanged();
+        emit restart7_5RequestStatusChanged(); emit interruptAcknowledgeStatusChanged();
     }
-    ///Resets the entire object (all data to default values). Fires ALL signals defined by the Processor class.
+    ///Resets the entire object (all data to default values EXCEPT those values which are externally controlled). Fires 
+    ///ALL signals defined by the Processor class.
     void resetAll() {
         RESET_IN(); resetMemory();
     }
@@ -340,8 +367,24 @@ signals:
     void programCounterChanged();
     ///Fired when the stack pointer register is changed.
     void stackPointerChanged();
-    ///Fired when the value of pseudo register M changes (either by a direct write or by modifying registers H or L).    
+    ///Fired when the value of pseudo register M changes (either by a direct write, by modifying registers H or L, or 
+    ///by external memory writes).    
     void MChanged();
+    ///Fired when this processor executes a SIM instruction and a serial output bit is sent on SOD latch.
+    void serialOutput();
+    ///Fired when the request status latch for RST 7.5 is changed.
+    void restart7_5RequestStatusChanged();
+    ///Fired when this processor changes the masking state for RST 7.5.
+    void maskRestart7_5Changed();
+    ///Fired when this processor changes the masking state for RST 6.5.
+    void maskRestart6_5Changed();
+    ///Fired when this processor changes the masking state for RST 5.5.
+    void maskRestart5_5Changed();
+    ///Fired when this processor changes the interrupt enable latch status as a result of executing either DI or EI 
+    ///instruction.
+    void interruptEnableStatusChanged();
+    ///Fired when the INTA interrupt acknowledge value changes (either acknowedged or reset).
+    void interruptAcknowledgeStatusChanged();
     ///Fired when a portion of the memory to this processor changes. It is guaranteed that startLoc will be always 
     ///within the range 0x0000 to 0xFFFF inclusive, and blockSize will be within the range 0x0000 and 0x10000
     ///inclusive.
