@@ -7,7 +7,7 @@
 int main(int argc, char *argv[])
 {
     processor_h::registerHeaderMetaTypes();
-    opcodes_h::registerHeaderMetaTypes();
+    OPCODES_H_registerHeaderMetaTypes();
     QApplication a(argc, argv);
     MainWindow w;
     w.show();
