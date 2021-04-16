@@ -2,7 +2,10 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include "commdefs.h"
+#include "opcodes.h"
 #include "processor.h"
+#include "assembler.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }

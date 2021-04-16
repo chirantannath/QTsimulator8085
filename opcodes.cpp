@@ -279,3 +279,21 @@ const opcode CM         ("CM",      "CM",       0xFCu,  3);
 //Unused instruction                            0xFD.
 const opcode CPI        ("CPI",     "CPI",      0xFEu,  2);
 const opcode RST_7      ("RST",     "RST 7",    0xFFu,  1);
+
+const opcode *opcodesByCode[256] = {
+    &NOP     , &LXI_B   , &STAX_B  , &INX_B   , &INR_B   , &DCR_B   , &MVI_B   , &RLC,
+    nullptr  , &DAD_B   , &LDAX_B  , &DCX_B   , &INR_C   , &DCR_C   , &MVI_C   , &RRC,
+    nullptr  , &LXI_D   , &STAX_D  , &INX_D   , &INR_D   , &DCR_D   , &MVI_D   , &RAL,
+    nullptr  , &DAD_D   , &LDAX_D  , &DCX_D   , &INR_E   , &DCR_E   , &MVI_E   , &RAR,
+    //TODO: Fill all opcodes!
+};
+
+#include <set>
+bool isOpcode(const char * const name) {
+    static std::set<const char *, CaseInsensitive> nameSet;
+    if(!nameSet.empty()) {
+        for(data8_calc_t i = 0; i < 256; i++)
+            if(opcodesByCode[i]->bytesRequired >= 1) nameSet.insert(opcodesByCode[i]->mnemonic);
+    }
+    return nameSet.find(name) != nameSet.end();
+}

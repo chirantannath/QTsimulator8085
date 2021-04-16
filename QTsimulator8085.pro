@@ -10,9 +10,12 @@ CONFIG += c++14
 
 SOURCES += \
     main.cpp \
-    mainwindow.cpp
+    mainwindow.cpp \
+    opcodes.cpp
 
 HEADERS += \
+    assembler.h \
+    commdefs.h \
     mainwindow.h \
     opcodes.h \
     processor.h

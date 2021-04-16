@@ -46,10 +46,12 @@ struct __opcode {
     __opcode(const char * const mnemonic, const char * const fullname, 
              const data8_t code, const unsigned bytesRequired) : mnemonic(mnemonic), name(fullname),
         code(code), bytesRequired(bytesRequired) {}
+    ///Copy constructor
     __opcode(const __opcode &op) = default;
+    ///Destructor (virtual REQUIRED for interop with Qt)
     virtual ~__opcode() = default;
+    ///Automatic conversion to data8_t type
     operator data8_t() const {return code & 0xFFu;}
-    //operator size_t() const {return opcode & 0xFFu;}
 };
 Q_DECLARE_METATYPE(__opcode);
 typedef __opcode opcode;
@@ -556,6 +558,11 @@ extern const opcode CM;
 extern const opcode CPI;
 ///Restart 7 (RST 7); hex machine code 0xFF.
 extern const opcode RST_7;
+
+///Checks if the string refers to a valid opcode (example "LXI" or "MOV" or such). Here name is the mnemonic required.
+extern bool isOpcode(const char * const name);
+
+extern const opcode *opcodesByCode[256];
 
 #define OPCODES_H_registerHeaderMetaTypes() {\
     qRegisterMetaType<__opcode>("opcode"); \

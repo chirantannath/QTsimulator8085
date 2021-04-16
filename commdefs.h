@@ -23,6 +23,8 @@ SOFTWARE.*/
 #define COMMDEFS
 
 #include <cstdint>
+#include <cctype>
+#include <cstring>
 
 /// Data type 8-bit for 8085.
 typedef uint_least8_t   data8_t; //"least" to optimise memory consumption (depends on target architecture)
@@ -63,6 +65,17 @@ typedef data8_t         flags_t;
 #define CARRY_FLAG              ((flags_t)0x01u)
 /// Allowed bits in the flag register/flags_t type
 #define ALLOWED_FLAGS           ((flags_t)0xD5u)
+
+///A case-insensitive comparator function object for const char*.
+struct CaseInsensitive {
+    bool operator()(const char *s1, const char *s2) const {
+        for(; *s1 != '\0' && *s2 != '\0'; s1++, s2++) {
+            char c1 = std::toupper(*s1), c2 = std::toupper(*s2);
+            if(c1 != c2) return c1 < c2;
+        }
+        return *s1 != '\0' && *s2 == '\0';
+    }
+};
 
 #endif // COMMDEFS
     

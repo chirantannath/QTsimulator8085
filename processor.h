@@ -197,6 +197,9 @@ class Processor : public QObject
     volatile unsigned intrVec : 3;
     ///TRAP interrupt flag.
     volatile unsigned trap : 1;
+    ///Checks if TRAP last made a low-to-high transition. This is important because actual 8085 hardware only recognises TRAP
+    ///when it makes that very low-to-high transition.
+    volatile unsigned trap_lowToHigh : 1;
     ///RST 7.5 interrupt latch; reset on RESET_IN or by bit D4 of accumulator when SIM is executed.
     volatile unsigned rst7_5 : 1;
     ///RST 6.5 interrupt latch.
@@ -222,14 +225,14 @@ public:
     /// Initializes this processor. All data storage locations (memory and all registers) are set to 0.
     explicit Processor(QObject *parent = nullptr) : QObject(parent) {
         std::function<void()> UNUSED = [&](){
-            unused = 1u;  //Remember to call unusedInstruction() outside call
+            unused = 1u; emit unusedInstruction(memory[pc]);
             pc++; pc &= 0xFFFFu; emit programCounterChanged();
         };
-        memset((void *)memory, 0, sizeof(memory));
-        memset((void *)io, 0, sizeof(io));
+        std::memset((void *)memory, 0, sizeof(memory));
+        std::memset((void *)io, 0, sizeof(io));
         pc = sp = 0u;
         a = b = c = d = e = h = l = 0u; f = 0u; 
-        ie = intr = inta = trap = rst7_5 = rst6_5 = rst5_5 = sod = sid = halt = unused = 0u;
+        ie = intr = inta = trap = rst7_5 = rst6_5 = rst5_5 = sod = sid = halt = unused = trap_lowToHigh = 0u;
         m5_5 = m6_5 = m7_5 = 1u; //Initial state is these external interrupts are masked.
         
         //Insert instruction codes here
@@ -287,7 +290,7 @@ public:
             SET_SPEC_FLAG(f, CARRY_FLAG, (temp & 0x80) == 0x80); emit flagsChanged();
             pc++; pc &= 0xFFFFu; emit programCounterChanged();
         };
-        //Unused instruction 0x08.
+        microprograms[0x08u]    = UNUSED;
         //DAD B (double/direct add register pair BC to HL); hex machine code 0x09.
         microprograms[DAD_B]    = [&](){
             data16_calc_t temp = PACK(b, c) + PACK(h, l);
@@ -340,7 +343,7 @@ public:
             SET_SPEC_FLAG(f, CARRY_FLAG, (temp & 0x1) == 0x1); emit flagsChanged();
             pc++; pc &= 0xFFFFu; emit programCounterChanged();
         };
-        //Unused instruction 0x10.
+        microprograms[0x10u]    = UNUSED;
         //LXI D, word (load register pair immediate DE); hex machine code 0x11.
         microprograms[LXI_D]    = [&](){
             e = memory[(pc + 1u) & 0xFFFFu] & 0xFFu; emit registerEChanged();
@@ -394,7 +397,7 @@ public:
             SET_SPEC_FLAG(f, CARRY_FLAG, (temp & 0x80) == 0x80); emit flagsChanged();
             pc++; pc &= 0xFFFFu; emit programCounterChanged();
         };
-        //Unused instruction 0x18.
+        microprograms[0x18u]    = UNUSED;
         //DAD D (double/direct add register pair DE to HL); hex machine code 0x19.
         microprograms[DAD_D]    = [&](){
             data16_calc_t temp = PACK(d, e) + PACK(h, l);
@@ -517,7 +520,7 @@ public:
             a = temp & 0xFFu; emit accumulatorChanged();
             pc++; pc &= 0xFFFFu; emit programCounterChanged();
         };
-        //Unused instruction 0x28.
+        microprograms[0x28u]    = UNUSED;
         //DAD H (double/direct add register pair HL to HL); hex machine code 0x29.
         microprograms[DAD_H]    = [&](){
             data16_calc_t temp = (data16_calc_t)PACK(h, l) << 1;
@@ -569,7 +572,7 @@ public:
         microprograms[CMA]      = [&](){
             a = ~a & 0xFFu; emit accumulatorChanged();
             pc++; pc &= 0xFFFFu; emit programCounterChanged();
-        }; //A sample.
+        };
         //Set interrupt masks (SIM); hex machine code 0x30.
         microprograms[SIM]      = [&](){
             if (a & 0x08u) {
@@ -631,7 +634,7 @@ public:
             SET_FLAG(f, CARRY_FLAG); emit flagsChanged();
             pc++; pc &= 0xFFFFu; emit programCounterChanged();
         };
-        //Unused instruction 0x38.
+        microprograms[0x38u]    = UNUSED;
         //DAD H (double/direct add register pair HL to HL); hex machine code 0x39.
         microprograms[DAD_SP]   = [&](){
             data16_calc_t temp = PACK(h, l) + sp;
@@ -1791,13 +1794,13 @@ public:
             pc &= 0xFFFFu; emit programCounterChanged(); 
         };
         //JZ address (jump on zero); hex machine code 0xCA.
-        microprograms[JZ]      = [&](){
+        microprograms[JZ]       = [&](){
             if(CHECK_FLAG(f, ZERO_FLAG)) 
                 pc = PACK(memory[(pc + 2u) & 0xFFFFu] & 0xFFu, memory[(pc + 1u) & 0xFFFFu] & 0xFFu);                
             else pc += 3;
             pc &= 0xFFFFu; emit programCounterChanged();
         };
-        //Unused instruction 0xCB.
+        microprograms[0xCBu]    = UNUSED;
         //CZ address (call on zero); hex machine code 0xCC.
         microprograms[CZ]      = [&](){
             if(CHECK_FLAG(f, ZERO_FLAG)) {
@@ -1926,7 +1929,7 @@ public:
             } else pc++;
             pc &= 0xFFFFu; emit programCounterChanged();
         };
-        //Unused instruction 0xD9.
+        microprograms[0xD9u]    = UNUSED;
         //JC address (jump on carry); hex machine code 0xDA.
         microprograms[JC]       = [&](){
             if(CHECK_FLAG(f, CARRY_FLAG)) 
@@ -1953,7 +1956,7 @@ public:
             } else pc += 3;
             pc &= 0xFFFFu; emit programCounterChanged();
         };
-        //Unused instruction 0xDD.
+        microprograms[0xDDu]    = UNUSED;
         //SBI byte (subtract immediate from accumulator with borrow); hex machine code 0xDE.
         microprograms[SBI]      = [&](){
             data8_t rhs = (memory[(pc + 1) & 0xFFFFu] & 0xFFu) + (CHECK_FLAG(f, CARRY_FLAG) ? 1u : 0u);
@@ -2092,7 +2095,7 @@ public:
             } else pc += 3;
             pc &= 0xFFFFu; emit programCounterChanged();
         };
-        //Unused instruction 0xED.
+        microprograms[0xEDu]    = UNUSED;
         //XRI byte (AND immediate with accumulator); hex machine code 0xEE.
         microprograms[XRI]      = [&](){
             a = (a ^ memory[(pc + 1) & 0xFFFFu]) & 0xFFu; emit accumulatorChanged();
@@ -2220,7 +2223,7 @@ public:
             } else pc += 3;
             pc &= 0xFFFFu; emit programCounterChanged();
         };
-        //Unused instruction 0xFD.
+        microprograms[0xFDu]    = UNUSED;
         //CPI byte (compare immediate against accumulator); hex machine code 0xFE.
         microprograms[CPI]      = [&](){
             data8_t rhs = memory[(pc + 1) & 0xFFFFu] & 0xFFu;
@@ -2336,11 +2339,64 @@ public slots:
     ///Runs the entire program stored in the memory of this processor system, starting from the instruction stored at
     ///the location pointed to by the program counter register. Many signals may be fired repeatedly (as per 
     ///instructions executed). In any case, programCounterChanged() is fired at least once.
-    void runFull() {} //currently this is a no-op (Implementation required)
+    void runFull() {
+        while(!halt && !unused && stepNextInstruction()); 
+        halt = unused = 0u;
+    } 
     ///Execute exactly 1 instruction pointed to by the current address stored in the program counter register. Multiple
     ///signals may be fired as per the instruction executed. In any case, programCounterChanged() is always fired.
-    void stepNextInstruction() {
+    ///This function returns true if the processor is ready to execute the next instruction on its program counter. Returns 
+    ///false if the last instruction executed was an HLT instruction.
+    bool stepNextInstruction() {
         microprograms[memory[pc & 0xFFFFu] & 0xFFu](); //This is a sample. Edit required (external interrupt check, etc.)
+        //Check HALT
+        if(halt) {emit halted(); return false;}
+        //Check TRAP
+        if(trap_lowToHigh) {
+            trap_lowToHigh = 0; //Disable next TRAP. Now we need a function call to 0024H.
+            sp--; sp &= 0xFFFFu; memory[sp] = (pc >> 8) & 0xFFu; 
+            emit memoryBlockUpdated(sp, 1u); if(sp == PACK(h, l)) emit MChanged();
+            sp--; sp &= 0xFFFFu; memory[sp] = pc & 0xFFu;
+            emit memoryBlockUpdated(sp, 1u); if(sp == PACK(h, l)) emit MChanged();
+            emit stackPointerChanged();
+            pc = 0x0024u; emit programCounterChanged();
+        }
+        else if(ie) {//Only do the next checks if interrupts are enabled
+            ie = 0u; //interrupts are disabled on recognising one
+            if(!m7_5 && rst7_5) {
+                sp--; sp &= 0xFFFFu; memory[sp] = (pc >> 8) & 0xFFu; 
+                emit memoryBlockUpdated(sp, 1u); if(sp == PACK(h, l)) emit MChanged();
+                sp--; sp &= 0xFFFFu; memory[sp] = pc & 0xFFu;
+                emit memoryBlockUpdated(sp, 1u); if(sp == PACK(h, l)) emit MChanged();
+                emit stackPointerChanged();
+                pc = 0x003Cu; emit programCounterChanged();
+            }
+            else if (!m6_5 && rst6_5) {
+                sp--; sp &= 0xFFFFu; memory[sp] = (pc >> 8) & 0xFFu; 
+                emit memoryBlockUpdated(sp, 1u); if(sp == PACK(h, l)) emit MChanged();
+                sp--; sp &= 0xFFFFu; memory[sp] = pc & 0xFFu;
+                emit memoryBlockUpdated(sp, 1u); if(sp == PACK(h, l)) emit MChanged();
+                emit stackPointerChanged(); 
+                pc = 0x0034u; emit programCounterChanged();
+            }
+            else if (!m5_5 && rst5_5) {
+                sp--; sp &= 0xFFFFu; memory[sp] = (pc >> 8) & 0xFFu; 
+                emit memoryBlockUpdated(sp, 1u); if(sp == PACK(h, l)) emit MChanged();
+                sp--; sp &= 0xFFFFu; memory[sp] = pc & 0xFFu;
+                emit memoryBlockUpdated(sp, 1u); if(sp == PACK(h, l)) emit MChanged();
+                emit stackPointerChanged(); 
+                pc = 0x002Cu; emit programCounterChanged();
+            }
+            else if (intr) {
+                sp--; sp &= 0xFFFFu; memory[sp] = (pc >> 8) & 0xFFu; 
+                emit memoryBlockUpdated(sp, 1u); if(sp == PACK(h, l)) emit MChanged();
+                sp--; sp &= 0xFFFFu; memory[sp] = pc & 0xFFu;
+                emit memoryBlockUpdated(sp, 1u); if(sp == PACK(h, l)) emit MChanged();
+                emit stackPointerChanged(); 
+                pc = (intrVec << 3) & 0xFFFFu; emit programCounterChanged();
+            }
+        }
+        return true;
     }
     ///Stores data at the address in the 64K memory of this processor. data is ANDed with 0xFF and address ANDed with
     ///0xFFFF before any operation is performed. Fires memoryBlockUpdated() and MChanged() signals.
@@ -2364,7 +2420,10 @@ public slots:
     ///Sets the request status for RST 5.5 (true if interrupt requested).
     void setRestart5_5Request(bool flag) {rst5_5 = flag ? 1u : 0u;}
     ///Sets the request status for TRAP (true if interrupt requested).
-    void setTRAPRequest(bool flag) {trap = flag ? 1u : 0u;}
+    void setTRAPRequest(bool flag) {
+        if(!trap && flag) {trap_lowToHigh = trap = 1u;}
+        else if (!flag) trap = 0u;
+    }
     ///Sets the request status for INTR (true if interrupt requested).
     void setInterruptRequest(bool flag) {intr = flag ? 1u : 0u;}
     ///Sets the RST instruction which is executed on INTR interrupt request. Note that only bits D5, D4, D3 are used
@@ -2373,17 +2432,19 @@ public slots:
     
     ///Resets entire memory to 0 (all 65,536 bytes, may take time). Fires memoryBlockUpdated() and MChanged() signals.
     void resetMemory() {
-        memset((void *)memory, 0, sizeof(memory)); 
+        std::memset((void *)memory, 0, sizeof(memory)); 
         emit memoryBlockUpdated(0u, MEMORY_SIZE); 
         emit MChanged();
     }
     ///Resets all I/O port latches to 0. Fires ioPortsReset() signal.
     void resetIOPorts() {
-        memset((void *)io, 0, sizeof(io));
+        std::memset((void *)io, 0, sizeof(io));
         emit ioPortsReset();
     }
     ///Resets the entire processor state EXCEPT MEMORY (all registers to 0). This is equivalent to the RESET_IN signal
-    ///to the 8085. Fires ALL signals EXCEPT memoryBlockUpdated(), ioPortUpdated() and ioPortsReset() signals.
+    ///to the 8085. Fires ALL signals EXCEPT memoryBlockUpdated(), ioPortUpdated() and ioPortsReset() signals. Note that this 
+    ///does NOT stop the processor if it is running (simulating instruction execution in its memory) on another thread. In that
+    ///case, haltExecution() must be called and wait for the other thread to finish.
     void RESET_IN() {//TODO: Reset must also affect interrupt masks
         pc = sp = 0u;
         a = b = c = d = e = h = l = 0u; f = 0u; ie = sod = inta = rst7_5 = halt = 0u;
@@ -2444,13 +2505,15 @@ signals:
     ///Fired when a portion of the memory to this processor changes. It is guaranteed that startLoc will be always 
     ///within the range 0x0000 to 0xFFFF inclusive, and blockSize will be within the range 0x0000 and 0x10000
     ///inclusive.
-    void memoryBlockUpdated(memaddr_t startLoc, memsize_t blockSize);
+    void memoryBlockUpdated(memaddr_t startLoc,memsize_t blockSize);
     ///Fired when the value stored in an I/O port latch (indicated by address) is updated.
     void ioPortUpdated(ioaddr_t address);
     ///Fired when ALL I/O port latches are reset to 0.
     void ioPortsReset();
     ///Fired when processor halts its instruction execution (either externally or due to HLT).
     void halted();
+    ///Fired when processor encounters an unused instruction value.
+    void unusedInstruction(data8_t);
 };
 
 namespace processor_h {
