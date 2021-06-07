@@ -2211,7 +2211,7 @@ public:
             pc++; pc &= 0xFFFFu; emit programCounterChanged();
         };
         //CM address (Call on Minus); hex machine code 0xFC.
-        microprograms[CNC]      = [&](){
+        microprograms[CM]      = [&](){
             if(!CHECK_FLAG(f, SIGN_FLAG)) {
                 pc += 3; pc &= 0xFFFFu; //Go to immediate next instruction
                 sp--; sp &= 0xFFFFu; memory[sp] = (pc >> 8) & 0xFFu; 
@@ -2237,7 +2237,7 @@ public:
             pc+=2; pc &= 0xFFFFu; emit programCounterChanged();
         };
         //RST 7 (restart 7); hex machine code 0xFF.
-        microprograms[RST_2]    = [&](){
+        microprograms[RST_7]    = [&](){
             pc++; pc &= 0xFFFFu; //Go to immediate next instruction
             sp--; sp &= 0xFFFFu; memory[sp] = (pc >> 8) & 0xFFu; 
             emit memoryBlockUpdated(sp, 1u); if(sp == PACK(h, l)) emit MChanged();
