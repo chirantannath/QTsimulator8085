@@ -12,6 +12,7 @@ SOURCES += \
     editor.cpp \
     main.cpp \
     mainwindow.cpp \
+    memorymodel.cpp \
     opcodes.cpp
 
 HEADERS += \
@@ -19,6 +20,7 @@ HEADERS += \
     commdefs.h \
     editor.h \
     mainwindow.h \
+    memorymodel.h \
     opcodes.h \
     processor.h
 

@@ -1,4 +1,9 @@
+#include <QtGlobal>
 #include <QChar>
+#include <QPushButton>
+#include <QLineEdit>
+#include <QRegExp>
+#include <QRegExpValidator>
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
@@ -29,7 +34,23 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
     processor = new Processor(this);
     
+    //validators for Number Conversion Tools
+    ui->decimal->setValidator(new QRegExpValidator(QRegExp("^\\s*[0123456789]*\\s*$"), ui->decimal));
+    ui->hexadecimal->setValidator(new QRegExpValidator(QRegExp("^\\s*[0123456789abcdefABCDEF]*\\s*$"), ui->hexadecimal));
+    ui->binary->setValidator(new QRegExpValidator(QRegExp("^\\s*[01]*\\s*$"), ui->binary));    
+    
     //connect events
+    connect(ui->sid, &QPushButton::toggled, this, &MainWindow::sidToggled);
+    connect(ui->trap, &QPushButton::toggled, this, &MainWindow::trapToggled);
+    connect(ui->r7_5, &QPushButton::toggled, this, &MainWindow::r7_5Toggled);
+    connect(ui->r6_5, &QPushButton::toggled, this, &MainWindow::r6_5Toggled);
+    connect(ui->r5_5, &QPushButton::toggled, this, &MainWindow::r5_5Toggled);
+    connect(ui->intr, &QPushButton::toggled, this, &MainWindow::intrToggled);
+    connect(ui->intrVec, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::intrVecSelected);
+    connect(ui->decimal, &QLineEdit::textEdited, this, &MainWindow::decimalEdited);    
+    connect(ui->hexadecimal, &QLineEdit::textEdited, this, &MainWindow::hexadecimalEdited);    
+    connect(ui->binary, &QLineEdit::textEdited, this, &MainWindow::binaryEdited);        
+    
     connect(processor, &Processor::accumulatorChanged, this, &MainWindow::accumulatorChanged);
     connect(processor, &Processor::registerBChanged, this, &MainWindow::registerBChanged);
     connect(processor, &Processor::registerCChanged, this, &MainWindow::registerCChanged);
@@ -38,8 +59,26 @@ MainWindow::MainWindow(QWidget *parent)
     connect(processor, &Processor::flagsChanged, this, &MainWindow::flagsChanged);
     connect(processor, &Processor::registerHChanged, this, &MainWindow::registerHChanged);
     connect(processor, &Processor::registerLChanged, this, &MainWindow::registerLChanged);
+    connect(processor, &Processor::programCounterChanged, this, &MainWindow::programCounterChanged);
+    connect(processor, &Processor::stackPointerChanged, this, &MainWindow::stackPointerChanged);
+    connect(processor, &Processor::MChanged, this, &MainWindow::MChanged);
+    connect(processor, &Processor::serialOutput, this, &MainWindow::serialOutput);
+    connect(processor, &Processor::restart7_5RequestStatusChanged, this, &MainWindow::restart7_5RequestStatusChanged);
+    connect(processor, &Processor::maskRestart7_5Changed, this, &MainWindow::maskRestart7_5Changed);
+    connect(processor, &Processor::maskRestart6_5Changed, this, &MainWindow::maskRestart6_5Changed);
+    connect(processor, &Processor::maskRestart5_5Changed, this, &MainWindow::maskRestart5_5Changed);
+    connect(processor, &Processor::interruptEnableStatusChanged, this, &MainWindow::interruptEnableStatusChanged);
+    connect(processor, &Processor::interruptAcknowledgeStatusChanged, this, &MainWindow::interruptAcknowledgeStatusChanged);    
     
     //fire events to initialize
+    ui->sid->setChecked(processor->serialInputDataLatch());
+    ui->trap->setChecked(processor->isTRAPRequested());
+    ui->r7_5->setChecked(processor->isRestart7_5Requested());
+    ui->r6_5->setChecked(processor->isRestart6_5Requested());
+    ui->r5_5->setChecked(processor->isRestart5_5Requested());
+    ui->intr->setChecked(processor->isInterruptRequested());    
+    ui->intrVec->setCurrentIndex((processor->getINTRVector() >> 3) & 7);
+    
     accumulatorChanged();
     registerBChanged();
     registerCChanged();
@@ -48,6 +87,15 @@ MainWindow::MainWindow(QWidget *parent)
     flagsChanged();
     registerHChanged();
     registerLChanged();
+    programCounterChanged();
+    stackPointerChanged();
+    MChanged();
+    serialOutput();
+    maskRestart7_5Changed();
+    maskRestart6_5Changed();
+    maskRestart5_5Changed();
+    interruptEnableStatusChanged();
+    interruptAcknowledgeStatusChanged();
 }
 
 MainWindow::~MainWindow()
@@ -55,6 +103,46 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
+void MainWindow::sidToggled(bool value) {
+    processor->setSerialInputLatch(value); 
+    ui->sid->setText(QString(value ? "1" : "0"));
+    ui->sidLabel->setText(QString(value ? "1" : "0"));    
+}
+void MainWindow::trapToggled(bool value) {processor->setTRAPRequest(value); ui->trap->setText(QString(value ? "1" : "0"));}
+void MainWindow::r7_5Toggled(bool value) {
+    disconnect(processor, &Processor::restart7_5RequestStatusChanged, this, &MainWindow::restart7_5RequestStatusChanged);    
+    processor->setRestart7_5Request(value); 
+    ui->r7_5->setText(QString(value ? "1" : "0"));
+    ui->i7_5->setText(QString(value ? "1" : "0"));    
+    connect(processor, &Processor::restart7_5RequestStatusChanged, this, &MainWindow::restart7_5RequestStatusChanged);    
+}
+void MainWindow::r6_5Toggled(bool value) {
+    processor->setRestart6_5Request(value); 
+    ui->r6_5->setText(QString(value ? "1" : "0"));
+    ui->i6_5->setText(QString(value ? "1" : "0"));    
+}
+void MainWindow::r5_5Toggled(bool value) {
+    processor->setRestart5_5Request(value); 
+    ui->r5_5->setText(QString(value ? "1" : "0"));
+    ui->i5_5->setText(QString(value ? "1" : "0"));    
+}
+void MainWindow::intrToggled(bool value) {processor->setInterruptRequest(value); ui->intr->setText(QString(value ? "1" : "0"));}
+void MainWindow::intrVecSelected(int rstIndex) {processor->setINTRVector((rstIndex << 3) | 0xC7);}
+void MainWindow::decimalEdited(const QString& text) {
+    unsigned long long value = text.toULongLong(nullptr, 10);
+    ui->hexadecimal->setText(QString::number(value, 16).toUpper());
+    ui->binary->setText(QString::number(value, 2));
+}
+void MainWindow::hexadecimalEdited(const QString &text) {
+    unsigned long long value = text.toULongLong(nullptr, 16);
+    ui->decimal->setText(QString::number(value, 10));
+    ui->binary->setText(QString::number(value, 2));
+}
+void MainWindow::binaryEdited(const QString &text) {
+    unsigned long long value = text.toULongLong(nullptr, 2);
+    ui->hexadecimal->setText(QString::number(value, 16).toUpper());
+    ui->decimal->setText(QString::number(value, 10));
+}
 void MainWindow::accumulatorChanged() {
     ui->accumulatorFull->setText(getHex8(processor->getAccumulator()));
     ui->accumulator7->setText(getBinDigit(processor->getAccumulator(), 7));
@@ -147,3 +235,23 @@ void MainWindow::registerLChanged() {
     ui->registerL0->setText(getBinDigit(processor->getLRegister(), 0));
     ui->registerHL->setText(getHex16(processor->getHLRegisterPair()));    
 }
+void MainWindow::programCounterChanged() {ui->programCounter->setText(getHex16(processor->getProgramCounter()));}
+void MainWindow::stackPointerChanged() {ui->stackPointer->setText(getHex16(processor->getStackPointer()));}
+void MainWindow::MChanged() {
+    ui->MFull->setText(getHex8(processor->getM()));
+    ui->M7->setText(getBinDigit(processor->getM(), 7));
+    ui->M6->setText(getBinDigit(processor->getM(), 6));
+    ui->M5->setText(getBinDigit(processor->getM(), 5));
+    ui->M4->setText(getBinDigit(processor->getM(), 4));
+    ui->M3->setText(getBinDigit(processor->getM(), 3));
+    ui->M2->setText(getBinDigit(processor->getM(), 2));
+    ui->M1->setText(getBinDigit(processor->getM(), 1));
+    ui->M0->setText(getBinDigit(processor->getM(), 0));    
+}
+void MainWindow::serialOutput() {ui->sod->setText(QString(processor->serialOutputDataLatch() ? "1" : "0"));} 
+void MainWindow::restart7_5RequestStatusChanged() {ui->r7_5->setChecked(processor->isRestart7_5Requested());}
+void MainWindow::maskRestart7_5Changed() {ui->m7_5->setText(QString(processor->maskRestart7_5() ? "1" : "0"));}
+void MainWindow::maskRestart6_5Changed() {ui->m6_5->setText(QString(processor->maskRestart6_5() ? "1" : "0"));}
+void MainWindow::maskRestart5_5Changed() {ui->m5_5->setText(QString(processor->maskRestart5_5() ? "1" : "0"));}
+void MainWindow::interruptEnableStatusChanged() {ui->ie->setText(QString(processor->isInterruptEnabled() ? "1" : "0"));}
+void MainWindow::interruptAcknowledgeStatusChanged() {ui->inta->setText(tr(processor->isInterruptAcknowledged() ? "Yes" : "No"));}

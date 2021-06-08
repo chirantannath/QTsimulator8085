@@ -230,6 +230,7 @@ public:
         };
         std::memset((void *)memory, 0, sizeof(memory));
         std::memset((void *)io, 0, sizeof(io));
+        intrVec = 0;
         pc = sp = 0u;
         a = b = c = d = e = h = l = 0u; f = 0u; 
         ie = intr = inta = trap = rst7_5 = rst6_5 = rst5_5 = sod = sid = halt = unused = trap_lowToHigh = 0u;
