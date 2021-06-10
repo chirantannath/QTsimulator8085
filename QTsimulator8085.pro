@@ -19,6 +19,7 @@ HEADERS += \
     assembler.h \
     commdefs.h \
     editor.h \
+    iomodel.h \
     mainwindow.h \
     memorymodel.h \
     opcodes.h \

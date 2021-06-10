@@ -4,6 +4,15 @@
 #include <QLineEdit>
 #include <QRegExp>
 #include <QRegExpValidator>
+#include <QHeaderView>
+#include <QGuiApplication>
+#include <QList>
+#include <QScreen>
+#include <QAction>
+#include <QFile>
+#include <QFileDialog>
+#include <QIODevice>
+#include <QTextStream>
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
@@ -32,7 +41,17 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+    const int largeLimit = QGuiApplication::primaryScreen()->size().width();
+    ui->splitter->setSizes(QList<int>({largeLimit, largeLimit})); //setSizes is relative
     processor = new Processor(this);
+    
+    //Memory and I/O tables
+    memTable = new MemoryTableModel(processor);
+    ui->memTableView->setModel(memTable);
+    ui->memTableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    ioTable = new IOTableModel(processor);
+    ui->ioTableView->setModel(ioTable);
+    ui->ioTableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     
     //validators for Number Conversion Tools
     ui->decimal->setValidator(new QRegExpValidator(QRegExp("^\\s*[0123456789]*\\s*$"), ui->decimal));
@@ -49,7 +68,12 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->intrVec, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::intrVecSelected);
     connect(ui->decimal, &QLineEdit::textEdited, this, &MainWindow::decimalEdited);    
     connect(ui->hexadecimal, &QLineEdit::textEdited, this, &MainWindow::hexadecimalEdited);    
-    connect(ui->binary, &QLineEdit::textEdited, this, &MainWindow::binaryEdited);        
+    connect(ui->binary, &QLineEdit::textEdited, this, &MainWindow::binaryEdited);
+    connect(ui->memResetButton, &QPushButton::clicked, processor, &Processor::resetMemory);
+    connect(ui->ioResetButton, &QPushButton::clicked, processor, &Processor::resetIOPorts);
+    connect(ui->source, &Editor::modificationChanged, this, &MainWindow::fileModified);
+    connect(ui->actionNew_Source_File, &QAction::triggered, this, &MainWindow::newFile);
+    connect(ui->actionOpen_Source_File, &QAction::triggered, this, &MainWindow::openFile);
     
     connect(processor, &Processor::accumulatorChanged, this, &MainWindow::accumulatorChanged);
     connect(processor, &Processor::registerBChanged, this, &MainWindow::registerBChanged);
@@ -96,6 +120,8 @@ MainWindow::MainWindow(QWidget *parent)
     maskRestart5_5Changed();
     interruptEnableStatusChanged();
     interruptAcknowledgeStatusChanged();
+    
+    newFile();
 }
 
 MainWindow::~MainWindow()
@@ -142,6 +168,24 @@ void MainWindow::binaryEdited(const QString &text) {
     unsigned long long value = text.toULongLong(nullptr, 2);
     ui->hexadecimal->setText(QString::number(value, 16).toUpper());
     ui->decimal->setText(QString::number(value, 10));
+}
+void MainWindow::fileModified(bool modified) {
+    if(modified && !windowTitle().startsWith(QString("*"))) setWindowTitle(QString("*") + windowTitle());
+    else if(!modified && windowTitle().startsWith(QString("*"))) setWindowTitle(windowTitle().right(windowTitle().length() - 1));
+}
+void MainWindow::newFile() {
+    currentlyOpenedFile = QFileInfo();
+    ui->source->setPlainText(QString(""));
+    setWindowTitle(tr("Untitled: QTSimulator8085"));
+}
+void MainWindow::openFile() {
+    currentlyOpenedFile = QFileInfo(QFileDialog::getOpenFileName(this, tr("Open Source File"), QString(), 
+                                                                 tr("8085 Assembly Source Files (*.asm);;All Files (*.*)")));
+    QFile file(currentlyOpenedFile.absoluteFilePath());
+    file.open(QIODevice::ReadOnly | QIODevice::Text);
+    ui->source->setPlainText(QTextStream(&file).readAll());
+    file.close();
+    setWindowTitle(currentlyOpenedFile.fileName() + tr(": QTSimulator8085"));
 }
 void MainWindow::accumulatorChanged() {
     ui->accumulatorFull->setText(getHex8(processor->getAccumulator()));

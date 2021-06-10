@@ -77,5 +77,16 @@ struct CaseInsensitive {
     }
 };
 
+#include <QString>
+
+extern const char HEX_DIGITS[17]; //1 extra for null
+
+QString getHex8(data8_t value);
+
+QString getHex16(data16_t value);
+
+QString getBinDigit(data8_t value, int position);
+
+
 #endif // COMMDEFS
     

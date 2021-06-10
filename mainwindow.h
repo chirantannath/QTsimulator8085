@@ -7,14 +7,11 @@
 #include "opcodes.h"
 #include "processor.h"
 #include "assembler.h"
+#include "memorymodel.h"
+#include "iomodel.h"
 
-extern const char HEX_DIGITS[17]; //1 extra for null
-
-QString getHex8(data8_t value);
-
-QString getHex16(data16_t value);
-
-QString getBinDigit(data8_t value, int position);
+//We will use Qt's file handling features because they correctly handle various file encodings (UTF-8 or ISOxxx, etc...)
+#include <QFileInfo>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -49,6 +46,12 @@ private slots:
     void hexadecimalEdited(const QString& text);
     
     void binaryEdited(const QString& text);
+    
+    void fileModified(bool modified);
+    
+    void newFile();
+    
+    void openFile();
     
     ///Fired when the accumulator register is changed.
     void accumulatorChanged();
@@ -92,5 +95,8 @@ private slots:
 private:
     Ui::MainWindow *ui;
     Processor *processor;
+    MemoryTableModel *memTable;
+    IOTableModel *ioTable;
+    QFileInfo currentlyOpenedFile;
 };
 #endif // MAINWINDOW_H
