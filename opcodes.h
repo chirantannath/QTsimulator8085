@@ -8,10 +8,10 @@ in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:
-    
+
     The above copyright notice and this permission notice shall be included in all
     copies or substantial portions of the Software.
-    
+
     THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
     IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
     FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -23,10 +23,7 @@ furnished to do so, subject to the following conditions:
 #define OPCODES_H
 
 #include <QMetaType>
-
-#ifndef COMMDEFS
 #include "commdefs.h"
-#endif
 
 ///Description for instructions.
 struct __opcode {
@@ -39,13 +36,17 @@ struct __opcode {
     ///Bytes required for this instruction; 1,2, or 3 for valid instructions and 0 for unused
     ///ones.
     const unsigned bytesRequired : 2;
-   
+    ///True if this opcode slot describes a pseudocode.
+    const unsigned isPseudocode : 1;
+
     ///Default constructor (DO NOT USE! required for interoperability with Qt.)
-    __opcode() : mnemonic(nullptr), name(nullptr), code(0u), bytesRequired(0u) {};
+    __opcode() : mnemonic(nullptr), name(nullptr), code(0u), bytesRequired(0u), isPseudocode(0) {};
     ///Constructor meant to be used
-    __opcode(const char * const mnemonic, const char * const fullname, 
+    __opcode(const char * const mnemonic, const char * const fullname,
              const data8_t code, const unsigned bytesRequired) : mnemonic(mnemonic), name(fullname),
-        code(code), bytesRequired(bytesRequired) {}
+        code(code), bytesRequired(bytesRequired), isPseudocode(0) {}
+    ///Constructor for pseudocode
+    __opcode(const char * const name) : mnemonic(name), name(name), code(0u), bytesRequired(0u), isPseudocode(1){}
     ///Copy constructor
     __opcode(const __opcode &op) = default;
     ///Destructor (virtual REQUIRED for interop with Qt)
@@ -559,9 +560,22 @@ extern const opcode CPI;
 ///Restart 7 (RST 7); hex machine code 0xFF.
 extern const opcode RST_7;
 
+//As of right now; two opcodes are supported.
+///Indicates the address offset from which to put instructions
+extern const opcode ORG;
+///Lists data bytes to be put without translation into the processor memory.
+extern const opcode DATA;
+
+///Checks if the string refers to a valid pseudocode name.
+extern bool isPseudocode(const char * const name);
+///Gets the corresponding opcode identifier object corresponding to the pseudocode name, or nullptr if not found.
+extern const opcode *getPseudocode(const char * const name);
+
 ///Checks if the string refers to a valid opcode (example "LXI" or "MOV" or such). Here name is the mnemonic required.
 extern bool isOpcode(const char * const name);
-
+///Get an opcode corresponding to it's name if possible. Returns nullptr if such is not possible.
+extern const opcode *getOpcode(const char * const name);
+///Map opcodes by bytecode.
 extern const opcode *opcodesByCode[256];
 
 #define OPCODES_H_registerHeaderMetaTypes() {\
@@ -570,4 +584,4 @@ extern const opcode *opcodesByCode[256];
 }
 
 #endif // OPCODES_H
-    
+

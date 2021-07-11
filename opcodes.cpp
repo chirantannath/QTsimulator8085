@@ -8,10 +8,10 @@ in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:
-    
+
 The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
-    
+
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -64,6 +64,7 @@ const opcode INR_H      ("INR",     "INR H",    0x24u,  1);
 const opcode DCR_H      ("DCR",     "DCR H",    0x25u,  1);
 const opcode MVI_H      ("MVI",     "MVI H",    0x26u,  2);
 const opcode DAA        ("DAA",     "DAA",      0x27u,  1);
+//Unused instruction                            0x28.
 const opcode DAD_H      ("DAD",     "DAD H",    0x29u,  1);
 const opcode LHLD       ("LHLD",    "LHLD",     0x2Au,  3);
 const opcode DCX_H      ("DCX",     "DCX H",    0x2Bu,  1);
@@ -103,45 +104,45 @@ const opcode MOV_C_H    ("MOV",     "MOV C, H", 0x4Cu,  1);
 const opcode MOV_C_L    ("MOV",     "MOV C, L", 0x4Du,  1);
 const opcode MOV_C_M    ("MOV",     "MOV C, M", 0x4Eu,  1);
 const opcode MOV_C_A    ("MOV",     "MOV C, A", 0x4Fu,  1);
-const opcode MOV_D_B    ("MOV",     "MOV B, B", 0x50u,  1);
-const opcode MOV_D_C    ("MOV",     "MOV B, C", 0x51u,  1);
-const opcode MOV_D_D    ("MOV",     "MOV B, D", 0x52u,  1);
-const opcode MOV_D_E    ("MOV",     "MOV B, E", 0x53u,  1);
-const opcode MOV_D_H    ("MOV",     "MOV B, H", 0x54u,  1);
-const opcode MOV_D_L    ("MOV",     "MOV B, L", 0x55u,  1);
-const opcode MOV_D_M    ("MOV",     "MOV B, M", 0x56u,  1);
-const opcode MOV_D_A    ("MOV",     "MOV B, A", 0x57u,  1);
-const opcode MOV_E_B    ("MOV",     "MOV C, B", 0x58u,  1);
-const opcode MOV_E_C    ("MOV",     "MOV C, C", 0x59u,  1);
-const opcode MOV_E_D    ("MOV",     "MOV C, D", 0x5Au,  1);
-const opcode MOV_E_E    ("MOV",     "MOV C, E", 0x5Bu,  1);
-const opcode MOV_E_H    ("MOV",     "MOV C, H", 0x5Cu,  1);
-const opcode MOV_E_L    ("MOV",     "MOV C, L", 0x5Du,  1);
-const opcode MOV_E_M    ("MOV",     "MOV C, M", 0x5Eu,  1);
-const opcode MOV_E_A    ("MOV",     "MOV C, A", 0x5Fu,  1);
-const opcode MOV_H_B    ("MOV",     "MOV B, B", 0x60u,  1);
-const opcode MOV_H_C    ("MOV",     "MOV B, C", 0x61u,  1);
-const opcode MOV_H_D    ("MOV",     "MOV B, D", 0x62u,  1);
-const opcode MOV_H_E    ("MOV",     "MOV B, E", 0x63u,  1);
-const opcode MOV_H_H    ("MOV",     "MOV B, H", 0x64u,  1);
-const opcode MOV_H_L    ("MOV",     "MOV B, L", 0x65u,  1);
-const opcode MOV_H_M    ("MOV",     "MOV B, M", 0x66u,  1);
-const opcode MOV_H_A    ("MOV",     "MOV B, A", 0x67u,  1);
-const opcode MOV_L_B    ("MOV",     "MOV C, B", 0x68u,  1);
-const opcode MOV_L_C    ("MOV",     "MOV C, C", 0x69u,  1);
-const opcode MOV_L_D    ("MOV",     "MOV C, D", 0x6Au,  1);
-const opcode MOV_L_E    ("MOV",     "MOV C, E", 0x6Bu,  1);
-const opcode MOV_L_H    ("MOV",     "MOV C, H", 0x6Cu,  1);
-const opcode MOV_L_L    ("MOV",     "MOV C, L", 0x6Du,  1);
-const opcode MOV_L_M    ("MOV",     "MOV C, M", 0x6Eu,  1);
-const opcode MOV_L_A    ("MOV",     "MOV C, A", 0x6Fu,  1);
+const opcode MOV_D_B    ("MOV",     "MOV D, B", 0x50u,  1);
+const opcode MOV_D_C    ("MOV",     "MOV D, C", 0x51u,  1);
+const opcode MOV_D_D    ("MOV",     "MOV D, D", 0x52u,  1);
+const opcode MOV_D_E    ("MOV",     "MOV D, E", 0x53u,  1);
+const opcode MOV_D_H    ("MOV",     "MOV D, H", 0x54u,  1);
+const opcode MOV_D_L    ("MOV",     "MOV D, L", 0x55u,  1);
+const opcode MOV_D_M    ("MOV",     "MOV D, M", 0x56u,  1);
+const opcode MOV_D_A    ("MOV",     "MOV D, A", 0x57u,  1);
+const opcode MOV_E_B    ("MOV",     "MOV E, B", 0x58u,  1);
+const opcode MOV_E_C    ("MOV",     "MOV E, C", 0x59u,  1);
+const opcode MOV_E_D    ("MOV",     "MOV E, D", 0x5Au,  1);
+const opcode MOV_E_E    ("MOV",     "MOV E, E", 0x5Bu,  1);
+const opcode MOV_E_H    ("MOV",     "MOV E, H", 0x5Cu,  1);
+const opcode MOV_E_L    ("MOV",     "MOV E, L", 0x5Du,  1);
+const opcode MOV_E_M    ("MOV",     "MOV E, M", 0x5Eu,  1);
+const opcode MOV_E_A    ("MOV",     "MOV E, A", 0x5Fu,  1);
+const opcode MOV_H_B    ("MOV",     "MOV H, B", 0x60u,  1);
+const opcode MOV_H_C    ("MOV",     "MOV H, C", 0x61u,  1);
+const opcode MOV_H_D    ("MOV",     "MOV H, D", 0x62u,  1);
+const opcode MOV_H_E    ("MOV",     "MOV H, E", 0x63u,  1);
+const opcode MOV_H_H    ("MOV",     "MOV H, H", 0x64u,  1);
+const opcode MOV_H_L    ("MOV",     "MOV H, L", 0x65u,  1);
+const opcode MOV_H_M    ("MOV",     "MOV H, M", 0x66u,  1);
+const opcode MOV_H_A    ("MOV",     "MOV H, A", 0x67u,  1);
+const opcode MOV_L_B    ("MOV",     "MOV L, B", 0x68u,  1);
+const opcode MOV_L_C    ("MOV",     "MOV L, C", 0x69u,  1);
+const opcode MOV_L_D    ("MOV",     "MOV L, D", 0x6Au,  1);
+const opcode MOV_L_E    ("MOV",     "MOV L, E", 0x6Bu,  1);
+const opcode MOV_L_H    ("MOV",     "MOV L, H", 0x6Cu,  1);
+const opcode MOV_L_L    ("MOV",     "MOV L, L", 0x6Du,  1);
+const opcode MOV_L_M    ("MOV",     "MOV L, M", 0x6Eu,  1);
+const opcode MOV_L_A    ("MOV",     "MOV L, A", 0x6Fu,  1);
 const opcode MOV_M_B    ("MOV",     "MOV M, B", 0x70u,  1);
 const opcode MOV_M_C    ("MOV",     "MOV M, C", 0x71u,  1);
 const opcode MOV_M_D    ("MOV",     "MOV M, D", 0x72u,  1);
 const opcode MOV_M_E    ("MOV",     "MOV M, E", 0x73u,  1);
 const opcode MOV_M_H    ("MOV",     "MOV M, H", 0x74u,  1);
 const opcode MOV_M_L    ("MOV",     "MOV M, L", 0x75u,  1);
-const opcode HLT        ("MOV",     "HLT",      0x76u,  1);
+const opcode HLT        ("HLT",     "HLT",      0x76u,  1);
 const opcode MOV_M_A    ("MOV",     "MOV M, A", 0x77u,  1);
 const opcode MOV_A_B    ("MOV",     "MOV A, B", 0x78u,  1);
 const opcode MOV_A_C    ("MOV",     "MOV A, C", 0x79u,  1);
@@ -175,14 +176,14 @@ const opcode SUB_H      ("SUB",     "SUB H",    0x94u,  1);
 const opcode SUB_L      ("SUB",     "SUB L",    0x95u,  1);
 const opcode SUB_M      ("SUB",     "SUB M",    0x96u,  1);
 const opcode SUB_A      ("SUB",     "SUB A",    0x97u,  1);
-const opcode SBB_B      ("SUB",     "SBB B",    0x98u,  1);
-const opcode SBB_C      ("SUB",     "SBB C",    0x99u,  1);
-const opcode SBB_D      ("SUB",     "SBB D",    0x9Au,  1);
-const opcode SBB_E      ("SUB",     "SBB E",    0x9Bu,  1);
-const opcode SBB_H      ("SUB",     "SBB H",    0x9Cu,  1);
-const opcode SBB_L      ("SUB",     "SBB L",    0x9Du,  1);
-const opcode SBB_M      ("SUB",     "SBB M",    0x9Eu,  1);
-const opcode SBB_A      ("SUB",     "SBB A",    0x9Fu,  1);
+const opcode SBB_B      ("SBB",     "SBB B",    0x98u,  1);
+const opcode SBB_C      ("SBB",     "SBB C",    0x99u,  1);
+const opcode SBB_D      ("SBB",     "SBB D",    0x9Au,  1);
+const opcode SBB_E      ("SBB",     "SBB E",    0x9Bu,  1);
+const opcode SBB_H      ("SBB",     "SBB H",    0x9Cu,  1);
+const opcode SBB_L      ("SBB",     "SBB L",    0x9Du,  1);
+const opcode SBB_M      ("SBB",     "SBB M",    0x9Eu,  1);
+const opcode SBB_A      ("SBB",     "SBB A",    0x9Fu,  1);
 const opcode ANA_B      ("ANA",     "ANA B",    0xA0u,  1);
 const opcode ANA_C      ("ANA",     "ANA C",    0xA1u,  1);
 const opcode ANA_D      ("ANA",     "ANA D",    0xA2u,  1);
@@ -283,17 +284,92 @@ const opcode RST_7      ("RST",     "RST 7",    0xFFu,  1);
 const opcode *opcodesByCode[256] = {
     &NOP     , &LXI_B   , &STAX_B  , &INX_B   , &INR_B   , &DCR_B   , &MVI_B   , &RLC,
     nullptr  , &DAD_B   , &LDAX_B  , &DCX_B   , &INR_C   , &DCR_C   , &MVI_C   , &RRC,
+
     nullptr  , &LXI_D   , &STAX_D  , &INX_D   , &INR_D   , &DCR_D   , &MVI_D   , &RAL,
     nullptr  , &DAD_D   , &LDAX_D  , &DCX_D   , &INR_E   , &DCR_E   , &MVI_E   , &RAR,
-    //TODO: Fill all opcodes!
+
+    &RIM     , &LXI_H   , &SHLD    , &INX_H   , &INR_H   , &DCR_H   , &MVI_H   , &DAA,
+    nullptr  , &DAD_H   , &LHLD    , &DCX_H   , &INR_L   , &DCR_L   , &MVI_L   , &CMA,
+
+    &SIM     , &LXI_SP  , &STA     , &INX_SP  , &INR_M   , &DCR_M   , &MVI_M   , &STC,
+    nullptr  , &DAD_SP  , &LDA     , &DCX_SP  , &INR_A   , &DCR_A   , &MVI_A   , &CMC,
+
+    &MOV_B_B , &MOV_B_C , &MOV_B_D , &MOV_B_E , &MOV_B_H , &MOV_B_L , &MOV_B_M , &MOV_B_A,
+    &MOV_C_B , &MOV_C_C , &MOV_C_D , &MOV_C_E , &MOV_C_H , &MOV_C_L , &MOV_C_M , &MOV_C_A,
+
+    &MOV_D_B , &MOV_D_C , &MOV_D_D , &MOV_D_E , &MOV_D_H , &MOV_D_L , &MOV_D_M , &MOV_D_A,
+    &MOV_E_B , &MOV_E_C , &MOV_E_D , &MOV_E_E , &MOV_E_H , &MOV_E_L , &MOV_E_M , &MOV_E_A,
+
+    &MOV_H_B , &MOV_H_C , &MOV_H_D , &MOV_H_E , &MOV_H_H , &MOV_H_L , &MOV_H_M , &MOV_H_A,
+    &MOV_L_B , &MOV_L_C , &MOV_L_D , &MOV_L_E , &MOV_L_H , &MOV_L_L , &MOV_L_M , &MOV_L_A,
+
+    &MOV_M_B , &MOV_M_C , &MOV_M_D , &MOV_M_E , &MOV_M_H , &MOV_M_L , &HLT     , &MOV_M_A,
+    &MOV_A_B , &MOV_A_C , &MOV_A_D , &MOV_A_E , &MOV_A_H , &MOV_A_L , &MOV_A_M , &MOV_A_A,
+
+    &ADD_B   , &ADD_C   , &ADD_D   , &ADD_E   , &ADD_H   , &ADD_L   , &ADD_M   , &ADD_A,
+    &ADC_B   , &ADC_C   , &ADC_D   , &ADC_E   , &ADC_H   , &ADC_L   , &ADC_M   , &ADC_A,
+
+    &SUB_B   , &SUB_C   , &SUB_D   , &SUB_E   , &SUB_H   , &SUB_L   , &SUB_M   , &SUB_A,
+    &SBB_B   , &SBB_C   , &SBB_D   , &SBB_E   , &SBB_H   , &SBB_L   , &SBB_M   , &SBB_A,
+
+    &ANA_B   , &ANA_C   , &ANA_D   , &ANA_E   , &ANA_H   , &ANA_L   , &ANA_M   , &ANA_A,
+    &XRA_B   , &XRA_C   , &XRA_D   , &XRA_E   , &XRA_H   , &XRA_L   , &XRA_M   , &XRA_A,
+
+    &ORA_B   , &ORA_C   , &ORA_D   , &ORA_E   , &ORA_H   , &ORA_L   , &ORA_M   , &ORA_A,
+    &CMP_B   , &CMP_C   , &CMP_D   , &CMP_E   , &CMP_H   , &CMP_L   , &CMP_M   , &CMP_A,
+
+    &RNZ     , &POP_B   , &JNZ     , &JMP     , &CNZ     , &PUSH_B  , &ADI     , &RST_0,
+    &RZ      , &RET     , &JZ      , nullptr  , &CZ      , &CALL    , &ACI     , &RST_1,
+
+    &RNC     , &POP_D   , &JNC     , &OUT     , &CNC     , &PUSH_D  , &SUI     , &RST_2,
+    &RC      , nullptr  , &JC      , &IN      , &CC      , nullptr  , &SBI     , &RST_3,
+
+    &RPO     , &POP_H   , &JPO     , &XTHL    , &CPO     , &PUSH_H  , &ANI     , &RST_4,
+    &RPE     , &PCHL    , &JPE     , &XCHG    , &CPE     , nullptr  , &XRI     , &RST_5,
+
+    &RP      , &POP_PSW , &JP      , &DI      , &CP      , &PUSH_PSW, &ORI     , &RST_6,
+    &RM      , &SPHL    , &JM      , &EI      , &CM      , nullptr  , &CPI     , &RST_7
 };
 
 #include <set>
+#include <iostream>
+
 bool isOpcode(const char * const name) {
     static std::set<const char *, CaseInsensitive> nameSet;
-    if(!nameSet.empty()) {
+    if(nameSet.empty()) {
         for(data8_calc_t i = 0; i < 256; i++)
-            if(opcodesByCode[i]->bytesRequired >= 1) nameSet.insert(opcodesByCode[i]->mnemonic);
+            if(opcodesByCode[i] != nullptr) nameSet.insert(opcodesByCode[i]->mnemonic);
     }
     return nameSet.find(name) != nameSet.end();
+}
+
+#include <map>
+
+const opcode *getOpcode(const char * const name) {
+    static std::map<const char *, const opcode *, CaseInsensitive> nameMap;
+    static CaseInsensitive comparator;
+    if(nameMap.empty()) {
+        for(data8_calc_t i = 0; i < 256; i++)
+            if(opcodesByCode[i] != nullptr &&
+                !comparator(opcodesByCode[i]->mnemonic, opcodesByCode[i]->name) &&
+                    !comparator(opcodesByCode[i]->name, opcodesByCode[i]->mnemonic)) nameMap.insert({opcodesByCode[i]->name, opcodesByCode[i]});
+    }
+    std::map<const char *, const opcode *, CaseInsensitive>::iterator node = nameMap.find(name);
+    return node != nameMap.end() ? node->second : nullptr;
+}
+
+const opcode ORG        ("ORG");
+const opcode DATA       ("DATA");
+
+bool isPseudocode(const char * const name) {
+    static std::set<const char *, CaseInsensitive> pseudoSet;
+    if(pseudoSet.empty()) {pseudoSet.insert("ORG"); pseudoSet.insert("DATA");}
+    return pseudoSet.find(name) != pseudoSet.end();
+}
+
+const opcode *getPseudocode(const char * const name) {
+    static std::map<const char *, const opcode *, CaseInsensitive> pseudoMap;
+    if(pseudoMap.empty()) {pseudoMap.insert({"ORG", &ORG}); pseudoMap.insert({"DATA", &DATA});}
+    std::map<const char *, const opcode *, CaseInsensitive>::iterator node = pseudoMap.find(name);
+    return node != pseudoMap.end() ? node->second : nullptr;
 }

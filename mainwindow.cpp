@@ -16,49 +16,45 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
-const char HEX_DIGITS[17] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F', '\0'};
-QString getHex8(data8_t value) {
-    QString text; text.resize(2);
-    text[0] = QChar(HEX_DIGITS[(value >> 4) & 0xF]);
-    text[1] = QChar(HEX_DIGITS[value & 0xF]);
-    return text;
-}
-QString getHex16(data16_t value) {
-    QString text; text.resize(4);
-    text[0] = QChar(HEX_DIGITS[(value >> 12) & 0xF]);
-    text[1] = QChar(HEX_DIGITS[(value >> 8) & 0xF]);
-    text[2] = QChar(HEX_DIGITS[(value >> 4) & 0xF]);
-    text[3] = QChar(HEX_DIGITS[value & 0xF]);    
-    return text;
-}
-QString getBinDigit(data8_t value, int position) {
-    const QChar bit[1] = {(value & (1 << position)) ? QChar('1') : QChar('0')};
-    return QString(bit, 1);
-}
-
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
-    , ui(new Ui::MainWindow)
+    , ui(new Ui::MainWindow), emptyDebugTableModel(new DebugTableModel(this))
 {
     ui->setupUi(this);
     const int largeLimit = QGuiApplication::primaryScreen()->size().width();
     ui->splitter->setSizes(QList<int>({largeLimit, largeLimit})); //setSizes is relative
-    processor = new Processor(this);
-    
+
+    //Processor lives on the background thread.
+    processor = new Processor();
+    connect(&backgroundThread, &QThread::finished, processor, &QObject::deleteLater);
+
+    assembler = new Assembler(processor);
+    connect(this, &MainWindow::__fireAssemblerEvent, assembler, &Assembler::assemble);
+    connect(assembler, &Assembler::assemblyFinished, this, &MainWindow::assemblyFinished);
+    connect(assembler, &Assembler::assemblyError, this, &MainWindow::assemblyError);
+
+    processor->moveToThread(&backgroundThread); //do this after processor has all its children.
+
     //Memory and I/O tables
-    memTable = new MemoryTableModel(processor);
+    memTable = new MemoryTableModel(processor, this);
     ui->memTableView->setModel(memTable);
     ui->memTableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
-    ioTable = new IOTableModel(processor);
+    ioTable = new IOTableModel(processor, this);
     ui->ioTableView->setModel(ioTable);
     ui->ioTableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
-    
+
+    //Current empty debug table
+    currentDebugTableModel = emptyDebugTableModel;
+    ui->debugTableView->setModel(currentDebugTableModel);
+    ui->debugTableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+
     //validators for Number Conversion Tools
     ui->decimal->setValidator(new QRegExpValidator(QRegExp("^\\s*[0123456789]*\\s*$"), ui->decimal));
     ui->hexadecimal->setValidator(new QRegExpValidator(QRegExp("^\\s*[0123456789abcdefABCDEF]*\\s*$"), ui->hexadecimal));
-    ui->binary->setValidator(new QRegExpValidator(QRegExp("^\\s*[01]*\\s*$"), ui->binary));    
-    
+    ui->binary->setValidator(new QRegExpValidator(QRegExp("^\\s*[01]*\\s*$"), ui->binary));
+
     //connect events
+    connect(ui->assembleButton, &QPushButton::clicked, this, &MainWindow::assemble);
     connect(ui->sid, &QPushButton::toggled, this, &MainWindow::sidToggled);
     connect(ui->trap, &QPushButton::toggled, this, &MainWindow::trapToggled);
     connect(ui->r7_5, &QPushButton::toggled, this, &MainWindow::r7_5Toggled);
@@ -66,15 +62,18 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->r5_5, &QPushButton::toggled, this, &MainWindow::r5_5Toggled);
     connect(ui->intr, &QPushButton::toggled, this, &MainWindow::intrToggled);
     connect(ui->intrVec, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::intrVecSelected);
-    connect(ui->decimal, &QLineEdit::textEdited, this, &MainWindow::decimalEdited);    
-    connect(ui->hexadecimal, &QLineEdit::textEdited, this, &MainWindow::hexadecimalEdited);    
+    connect(ui->decimal, &QLineEdit::textEdited, this, &MainWindow::decimalEdited);
+    connect(ui->hexadecimal, &QLineEdit::textEdited, this, &MainWindow::hexadecimalEdited);
     connect(ui->binary, &QLineEdit::textEdited, this, &MainWindow::binaryEdited);
+    connect(ui->RESET_IN, &QPushButton::clicked, processor, &Processor::RESET_IN);
     connect(ui->memResetButton, &QPushButton::clicked, processor, &Processor::resetMemory);
     connect(ui->ioResetButton, &QPushButton::clicked, processor, &Processor::resetIOPorts);
     connect(ui->source, &Editor::modificationChanged, this, &MainWindow::fileModified);
     connect(ui->actionNew_Source_File, &QAction::triggered, this, &MainWindow::newFile);
     connect(ui->actionOpen_Source_File, &QAction::triggered, this, &MainWindow::openFile);
-    
+
+    connect(ui->oneShot, &QPushButton::clicked, processor, &Processor::runFull);
+
     connect(processor, &Processor::accumulatorChanged, this, &MainWindow::accumulatorChanged);
     connect(processor, &Processor::registerBChanged, this, &MainWindow::registerBChanged);
     connect(processor, &Processor::registerCChanged, this, &MainWindow::registerCChanged);
@@ -92,17 +91,17 @@ MainWindow::MainWindow(QWidget *parent)
     connect(processor, &Processor::maskRestart6_5Changed, this, &MainWindow::maskRestart6_5Changed);
     connect(processor, &Processor::maskRestart5_5Changed, this, &MainWindow::maskRestart5_5Changed);
     connect(processor, &Processor::interruptEnableStatusChanged, this, &MainWindow::interruptEnableStatusChanged);
-    connect(processor, &Processor::interruptAcknowledgeStatusChanged, this, &MainWindow::interruptAcknowledgeStatusChanged);    
-    
+    connect(processor, &Processor::interruptAcknowledgeStatusChanged, this, &MainWindow::interruptAcknowledgeStatusChanged);
+
     //fire events to initialize
     ui->sid->setChecked(processor->serialInputDataLatch());
     ui->trap->setChecked(processor->isTRAPRequested());
     ui->r7_5->setChecked(processor->isRestart7_5Requested());
     ui->r6_5->setChecked(processor->isRestart6_5Requested());
     ui->r5_5->setChecked(processor->isRestart5_5Requested());
-    ui->intr->setChecked(processor->isInterruptRequested());    
+    ui->intr->setChecked(processor->isInterruptRequested());
     ui->intrVec->setCurrentIndex((processor->getINTRVector() >> 3) & 7);
-    
+
     accumulatorChanged();
     registerBChanged();
     registerCChanged();
@@ -120,37 +119,74 @@ MainWindow::MainWindow(QWidget *parent)
     maskRestart5_5Changed();
     interruptEnableStatusChanged();
     interruptAcknowledgeStatusChanged();
-    
+
     newFile();
+    backgroundThread.start();
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
+    backgroundThread.quit();
+    backgroundThread.wait();
 }
 
+#include <vector>
+#include <sstream>
+void MainWindow::assemble() {
+    ui->statusbar->showMessage(tr("Assembling..."));
+    processor->resetAll();
+    assembler->in = new std::stringstream(ui->source->toPlainText().toStdString());
+    ui->source->setDisabled(true); //source disabled while assembling
+    ui->memTableView->setDisabled(true); //memory disabled while assembling
+    emit __fireAssemblerEvent();
+}
+void MainWindow::assemblyFinished() {
+    delete assembler->in;
+    ui->source->setDisabled(false);
+    ui->memTableView->setDisabled(false);
+    if(currentDebugTableModel != emptyDebugTableModel) currentDebugTableModel->deleteLater();
+    currentDebugTableModel = new DebugTableModel(this, assembler->instructions);
+    ui->debugTableView->setModel(currentDebugTableModel);
+    ui->leftWidget->setCurrentWidget(ui->debugTab); //go to debug page if possible
+    ui->rightWidget->setCurrentWidget(ui->memoryTab);
+    ui->statusbar->showMessage(tr("OK."));
+}
+#include <QTextCursor>
+#include <QTextBlock>
+void MainWindow::assemblyError(SyntaxError ex) {
+    delete assembler->in;
+    ui->source->setDisabled(false);
+    ui->memTableView->setDisabled(false);
+    QTextCursor cursor = ui->source->textCursor();
+    if(ex.lineNumber > 0) cursor.setPosition(ui->source->document()->findBlockByLineNumber(ex.lineNumber-1).position());
+    if(ex.columnNumber > 0) cursor.movePosition(QTextCursor::NextCharacter, QTextCursor::MoveAnchor, ex.columnNumber-1);
+    ui->source->setTextCursor(cursor);
+    ui->leftWidget->setCurrentWidget(ui->sourceTab);
+    ui->statusbar->showMessage(constructAssemblyError(ex));
+}
 void MainWindow::sidToggled(bool value) {
-    processor->setSerialInputLatch(value); 
+    processor->setSerialInputLatch(value);
     ui->sid->setText(QString(value ? "1" : "0"));
-    ui->sidLabel->setText(QString(value ? "1" : "0"));    
+    ui->sidLabel->setText(QString(value ? "1" : "0"));
 }
 void MainWindow::trapToggled(bool value) {processor->setTRAPRequest(value); ui->trap->setText(QString(value ? "1" : "0"));}
 void MainWindow::r7_5Toggled(bool value) {
-    disconnect(processor, &Processor::restart7_5RequestStatusChanged, this, &MainWindow::restart7_5RequestStatusChanged);    
-    processor->setRestart7_5Request(value); 
+    disconnect(processor, &Processor::restart7_5RequestStatusChanged, this, &MainWindow::restart7_5RequestStatusChanged);
+    processor->setRestart7_5Request(value);
     ui->r7_5->setText(QString(value ? "1" : "0"));
-    ui->i7_5->setText(QString(value ? "1" : "0"));    
-    connect(processor, &Processor::restart7_5RequestStatusChanged, this, &MainWindow::restart7_5RequestStatusChanged);    
+    ui->i7_5->setText(QString(value ? "1" : "0"));
+    connect(processor, &Processor::restart7_5RequestStatusChanged, this, &MainWindow::restart7_5RequestStatusChanged);
 }
 void MainWindow::r6_5Toggled(bool value) {
-    processor->setRestart6_5Request(value); 
+    processor->setRestart6_5Request(value);
     ui->r6_5->setText(QString(value ? "1" : "0"));
-    ui->i6_5->setText(QString(value ? "1" : "0"));    
+    ui->i6_5->setText(QString(value ? "1" : "0"));
 }
 void MainWindow::r5_5Toggled(bool value) {
-    processor->setRestart5_5Request(value); 
+    processor->setRestart5_5Request(value);
     ui->r5_5->setText(QString(value ? "1" : "0"));
-    ui->i5_5->setText(QString(value ? "1" : "0"));    
+    ui->i5_5->setText(QString(value ? "1" : "0"));
 }
 void MainWindow::intrToggled(bool value) {processor->setInterruptRequest(value); ui->intr->setText(QString(value ? "1" : "0"));}
 void MainWindow::intrVecSelected(int rstIndex) {processor->setINTRVector((rstIndex << 3) | 0xC7);}
@@ -179,7 +215,7 @@ void MainWindow::newFile() {
     setWindowTitle(tr("Untitled: QTSimulator8085"));
 }
 void MainWindow::openFile() {
-    currentlyOpenedFile = QFileInfo(QFileDialog::getOpenFileName(this, tr("Open Source File"), QString(), 
+    currentlyOpenedFile = QFileInfo(QFileDialog::getOpenFileName(this, tr("Open Source File"), QString(),
                                                                  tr("8085 Assembly Source Files (*.asm);;All Files (*.*)")));
     QFile file(currentlyOpenedFile.absoluteFilePath());
     file.open(QIODevice::ReadOnly | QIODevice::Text);
@@ -197,7 +233,7 @@ void MainWindow::accumulatorChanged() {
     ui->accumulator2->setText(getBinDigit(processor->getAccumulator(), 2));
     ui->accumulator1->setText(getBinDigit(processor->getAccumulator(), 1));
     ui->accumulator0->setText(getBinDigit(processor->getAccumulator(), 0));
-    ui->programStatusWord->setText(getHex16(processor->getProgramStatusWord()));    
+    ui->programStatusWord->setText(getHex16(processor->getProgramStatusWord()));
 }
 void MainWindow::registerBChanged() {
     ui->registerBFull->setText(getHex8(processor->getBRegister()));
@@ -209,7 +245,7 @@ void MainWindow::registerBChanged() {
     ui->registerB2->setText(getBinDigit(processor->getBRegister(), 2));
     ui->registerB1->setText(getBinDigit(processor->getBRegister(), 1));
     ui->registerB0->setText(getBinDigit(processor->getBRegister(), 0));
-    ui->registerBC->setText(getHex16(processor->getBCRegisterPair()));    
+    ui->registerBC->setText(getHex16(processor->getBCRegisterPair()));
 }
 void MainWindow::registerCChanged() {
     ui->registerCFull->setText(getHex8(processor->getCRegister()));
@@ -221,7 +257,7 @@ void MainWindow::registerCChanged() {
     ui->registerC2->setText(getBinDigit(processor->getCRegister(), 2));
     ui->registerC1->setText(getBinDigit(processor->getCRegister(), 1));
     ui->registerC0->setText(getBinDigit(processor->getCRegister(), 0));
-    ui->registerBC->setText(getHex16(processor->getBCRegisterPair()));    
+    ui->registerBC->setText(getHex16(processor->getBCRegisterPair()));
 }
 void MainWindow::registerDChanged() {
     ui->registerDFull->setText(getHex8(processor->getDRegister()));
@@ -232,7 +268,7 @@ void MainWindow::registerDChanged() {
     ui->registerD3->setText(getBinDigit(processor->getDRegister(), 3));
     ui->registerD2->setText(getBinDigit(processor->getDRegister(), 2));
     ui->registerD1->setText(getBinDigit(processor->getDRegister(), 1));
-    ui->registerD0->setText(getBinDigit(processor->getDRegister(), 0));    
+    ui->registerD0->setText(getBinDigit(processor->getDRegister(), 0));
     ui->registerDE->setText(getHex16(processor->getDERegisterPair()));
 }
 void MainWindow::registerEChanged() {
@@ -244,7 +280,7 @@ void MainWindow::registerEChanged() {
     ui->registerE3->setText(getBinDigit(processor->getERegister(), 3));
     ui->registerE2->setText(getBinDigit(processor->getERegister(), 2));
     ui->registerE1->setText(getBinDigit(processor->getERegister(), 1));
-    ui->registerE0->setText(getBinDigit(processor->getERegister(), 0));    
+    ui->registerE0->setText(getBinDigit(processor->getERegister(), 0));
     ui->registerDE->setText(getHex16(processor->getDERegisterPair()));
 }
 void MainWindow::flagsChanged() {
@@ -265,7 +301,7 @@ void MainWindow::registerHChanged() {
     ui->registerH2->setText(getBinDigit(processor->getHRegister(), 2));
     ui->registerH1->setText(getBinDigit(processor->getHRegister(), 1));
     ui->registerH0->setText(getBinDigit(processor->getHRegister(), 0));
-    ui->registerHL->setText(getHex16(processor->getHLRegisterPair()));    
+    ui->registerHL->setText(getHex16(processor->getHLRegisterPair()));
 }
 void MainWindow::registerLChanged() {
     ui->registerLFull->setText(getHex8(processor->getLRegister()));
@@ -277,7 +313,7 @@ void MainWindow::registerLChanged() {
     ui->registerL2->setText(getBinDigit(processor->getLRegister(), 2));
     ui->registerL1->setText(getBinDigit(processor->getLRegister(), 1));
     ui->registerL0->setText(getBinDigit(processor->getLRegister(), 0));
-    ui->registerHL->setText(getHex16(processor->getHLRegisterPair()));    
+    ui->registerHL->setText(getHex16(processor->getHLRegisterPair()));
 }
 void MainWindow::programCounterChanged() {ui->programCounter->setText(getHex16(processor->getProgramCounter()));}
 void MainWindow::stackPointerChanged() {ui->stackPointer->setText(getHex16(processor->getStackPointer()));}
@@ -290,9 +326,9 @@ void MainWindow::MChanged() {
     ui->M3->setText(getBinDigit(processor->getM(), 3));
     ui->M2->setText(getBinDigit(processor->getM(), 2));
     ui->M1->setText(getBinDigit(processor->getM(), 1));
-    ui->M0->setText(getBinDigit(processor->getM(), 0));    
+    ui->M0->setText(getBinDigit(processor->getM(), 0));
 }
-void MainWindow::serialOutput() {ui->sod->setText(QString(processor->serialOutputDataLatch() ? "1" : "0"));} 
+void MainWindow::serialOutput() {ui->sod->setText(QString(processor->serialOutputDataLatch() ? "1" : "0"));}
 void MainWindow::restart7_5RequestStatusChanged() {ui->r7_5->setChecked(processor->isRestart7_5Requested());}
 void MainWindow::maskRestart7_5Changed() {ui->m7_5->setText(QString(processor->maskRestart7_5() ? "1" : "0"));}
 void MainWindow::maskRestart6_5Changed() {ui->m6_5->setText(QString(processor->maskRestart6_5() ? "1" : "0"));}

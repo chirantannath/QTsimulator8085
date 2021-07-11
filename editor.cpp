@@ -8,10 +8,10 @@ in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:
-    
+
     The above copyright notice and this permission notice shall be included in all
     copies or substantial portions of the Software.
-    
+
     THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
     IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
     FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -27,41 +27,38 @@ furnished to do so, subject to the following conditions:
 #include <QPainter>
 #include <QString>
 #include "editor.h"
-    
+
+//Editor
+
 Editor::Editor(QWidget *parent) : QPlainTextEdit(parent) {
     lineNumberArea = new LineNumberArea(this);
     connect(this, &Editor::blockCountChanged, this, &Editor::updateLineNumberAreaWidth);
     connect(this, &Editor::updateRequest, this, &Editor::updateLineNumberArea);
     connect(this, &Editor::cursorPositionChanged, this, &Editor::highlightCurrentLine);
-    
+
     updateLineNumberAreaWidth(0);
     highlightCurrentLine();
 }
-
 int Editor::lineNumberAreaWidth() {
     int digits = 1;
     int max = (blockCount() > 1) ? blockCount() : 1;
     while(max >= 10) {max /= 10; ++digits;}
     return 3 + fontMetrics().horizontalAdvance(QLatin1Char('9')) * digits;
 }
-
 void Editor::updateLineNumberAreaWidth(int /*newBlockCount*/) {setViewportMargins(lineNumberAreaWidth(), 0, 0, 0);} //dummy parameters not needed
-
 void Editor::updateLineNumberArea(const QRect &rect, int dy) {
     if(dy != 0) lineNumberArea->scroll(0, dy);
     else lineNumberArea->update(0, rect.y(), lineNumberArea->width(), rect.height());
     if(rect.contains(viewport()->rect())) updateLineNumberAreaWidth(0);
 }
-
 void Editor::resizeEvent(QResizeEvent *e) {//override
     QPlainTextEdit::resizeEvent(e);
     QRect cr = contentsRect();
     lineNumberArea->setGeometry(QRect(cr.left(), cr.top(), lineNumberAreaWidth(), cr.height()));
 }
-
 void Editor::highlightCurrentLine() {
     QList<QTextEdit::ExtraSelection> extraSelections;
-    
+
     if(!isReadOnly()) {
         QTextEdit::ExtraSelection selection;
         QColor lineColor = QColor(Qt::yellow).lighter(160);
@@ -73,7 +70,6 @@ void Editor::highlightCurrentLine() {
     }
     setExtraSelections(extraSelections);
 }
-
 void Editor::lineNumberAreaPaintEvent(QPaintEvent *event) {
     QPainter painter(lineNumberArea);
     painter.fillRect(event->rect(), Qt::lightGray);

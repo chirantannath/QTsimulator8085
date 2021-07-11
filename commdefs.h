@@ -8,10 +8,10 @@ in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:
-    
+
 The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
-    
+
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -28,12 +28,12 @@ SOFTWARE.*/
 
 /// Data type 8-bit for 8085.
 typedef uint_least8_t   data8_t; //"least" to optimise memory consumption (depends on target architecture)
-/// 8-bit data calculation type; this is the type on which 8-bit calculations are to be done. This will be larger than 
+/// 8-bit data calculation type; this is the type on which 8-bit calculations are to be done. This will be larger than
 /// data8_t to permit checking of overflow/underflow.
 typedef uint_fast16_t   data8_calc_t; //"fast" to optimise computational speed (depends on target architecture)
 /// Data type 16-bit for the 8085.
 typedef uint_least16_t  data16_t;
-/// 16-bit data calculation type; this is the type on which 16-bit calculations are to be done. This will be larger than 
+/// 16-bit data calculation type; this is the type on which 16-bit calculations are to be done. This will be larger than
 /// data16_t to permit checking of overflow/underflow.
 typedef uint_fast32_t   data16_calc_t;
 
@@ -68,13 +68,15 @@ typedef data8_t         flags_t;
 
 ///A case-insensitive comparator function object for const char*.
 struct CaseInsensitive {
-    bool operator()(const char *s1, const char *s2) const {
-        for(; *s1 != '\0' && *s2 != '\0'; s1++, s2++) {
-            char c1 = std::toupper(*s1), c2 = std::toupper(*s2);
-            if(c1 != c2) return c1 < c2;
-        }
-        return *s1 != '\0' && *s2 == '\0';
-    }
+    bool operator()(const char *, const char *) const;
+    static CaseInsensitive comparator;
+};
+
+#include <string>
+///A case-insensitive comparator function object for std::string.
+struct StringInsensitive {
+    bool operator()(const std::string&, const std::string&) const;
+    static StringInsensitive comparator;
 };
 
 #include <QString>
@@ -87,6 +89,58 @@ QString getHex16(data16_t value);
 
 QString getBinDigit(data8_t value, int position);
 
+///Pack two 8-bit values into a 16-bit value (most significant byte first)
+#define PACK(higher, lower) ((((higher) << 8) | (lower)) & 0xFFFFu)
+///Unpack(extract) two 8-bot values from a 16-bit value (most significant byte first)
+#define UNPACK(higher, lower, src) {(higher) = ((src) >> 8) & 0xFFu; (lower) = (src) & 0xFFu;}
+///Set a flag into a flags_t data byte
+#define SET_FLAG(data, flag) ((data) = ((data) | (flag)) & ALLOWED_FLAGS)
+///Check a flag from a flags_t data byte. The following should be nonzero if flag is present
+///in data.
+#define CHECK_FLAG(data, flag) ((data) & (flag))
+///Unset a flag into a flags_t data byte
+#define UNSET_FLAG(data, flag) ((data) = (data) & ~(flag) & ALLOWED_FLAGS)
+///Set a flag in a flags_t data byte to the specific value.
+#define SET_SPEC_FLAG(data, flag, value) {\
+if (value) {SET_FLAG(data, flag);}\
+else {UNSET_FLAG(data, flag);}}
 
-#endif // COMMDEFS
-    
+//The following are required because not all architectures use 2's complement.
+///Negate a 4-bit signed integer in 2's complement form.
+#define NEGATE4(x) ((~(x) + 1u) & 0xFu)
+///Negate an 8-bit signed integer in 2's complement form.
+#define NEGATE8(x) ((~(x) + 1u) & 0xFFu)
+///Negate a 16-bit signed integer in 2's complement form.
+#define NEGATE16(x) ((~(x) + 1u) & 0xFFFFu)
+///Decrement a 4-bit lvalue in 2's complemennt form.
+#define DECREMENT4(x) ((x) = (((x) + 0xFu) & 0xFu))
+///Decrement an 8-bit lvalue in 2's complement form.
+#define DECREMENT8(x) ((x) = (((x) + 0xFFu) & 0xFFu))
+///Decrement a 16-bit lvalue in 2's complement form.
+#define DECREMENT16(x) ((x) = (((x) + 0xFFFFu) & 0xFFFFu))
+///Swap two values with given temporary location.
+#define SWAP(a, b, t) {(t) = (a); (a) = (b); (b) = (t);}
+
+///Lookup table for parity flag values. We use lookup tables for faster resolving.
+extern const bool PARITY_LOOKUP[256];
+
+#include <QMetaType>
+
+namespace commdefs_h {
+///Required for interoperability with the Qt multithreading system. To pass signals between multiple threads, the Qt
+///system needs to know what type names are we using to transfer data, including typedefs. MUST be among the first
+///functions called in main().
+inline void registerHeaderMetaTypes() {
+    qRegisterMetaType<data8_t>("data8_t");
+    qRegisterMetaType<data8_calc_t>("data8_calc_t");
+    qRegisterMetaType<data16_t>("data16_t");
+    qRegisterMetaType<data16_calc_t>("data16_calc_t");
+    qRegisterMetaType<memaddr_t>("memaddr_t");
+    qRegisterMetaType<memsize_t>("memsize_t");
+    qRegisterMetaType<flags_t>("flags_t");
+    qRegisterMetaType<ioaddr_t>("ioaddr_t");
+}
+}
+
+
+#endif //COMMDEFS
