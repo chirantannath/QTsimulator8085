@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1436</width>
-    <height>917</height>
+    <width>1722</width>
+    <height>852</height>
    </rect>
   </property>
   <property name="font">
@@ -27,7 +27,7 @@
       </property>
       <widget class="QTabWidget" name="leftWidget">
        <property name="currentIndex">
-        <number>0</number>
+        <number>1</number>
        </property>
        <widget class="QWidget" name="sourceTab">
         <attribute name="title">
@@ -87,6 +87,16 @@
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout_5">
            <item>
+            <widget class="QLabel" name="label_55">
+             <property name="text">
+              <string>Run At (hex):</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLineEdit" name="runTarget"/>
+           </item>
+           <item>
             <spacer name="horizontalSpacer_6">
              <property name="orientation">
               <enum>Qt::Horizontal</enum>
@@ -100,9 +110,23 @@
             </spacer>
            </item>
            <item>
+            <widget class="QPushButton" name="haltButton">
+             <property name="text">
+              <string>Halt</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="stepButton">
+             <property name="text">
+              <string>Step</string>
+             </property>
+            </widget>
+           </item>
+           <item>
             <widget class="QPushButton" name="oneShot">
              <property name="text">
-              <string>Run All at Once</string>
+              <string>Run</string>
              </property>
             </widget>
            </item>
@@ -113,7 +137,7 @@
       </widget>
       <widget class="QTabWidget" name="rightWidget">
        <property name="currentIndex">
-        <number>0</number>
+        <number>1</number>
        </property>
        <widget class="QWidget" name="processorTab">
         <attribute name="title">
@@ -3007,6 +3031,16 @@
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout">
            <item>
+            <widget class="QLabel" name="label_56">
+             <property name="text">
+              <string>Find Address (hex):</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLineEdit" name="findTarget"/>
+           </item>
+           <item>
             <spacer name="horizontalSpacer_4">
              <property name="orientation">
               <enum>Qt::Horizontal</enum>
@@ -3074,7 +3108,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1436</width>
+     <width>1722</width>
      <height>20</height>
     </rect>
    </property>

@@ -13,6 +13,8 @@
 #include <QFileDialog>
 #include <QIODevice>
 #include <QTextStream>
+#include <QModelIndex>
+#include <vector>
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
@@ -54,6 +56,8 @@ MainWindow::MainWindow(QWidget *parent)
     ui->decimal->setValidator(new QRegExpValidator(QRegExp("^\\s*[0123456789]*\\s*$"), ui->decimal));
     ui->hexadecimal->setValidator(new QRegExpValidator(QRegExp("^\\s*[0123456789abcdefABCDEF]*\\s*$"), ui->hexadecimal));
     ui->binary->setValidator(new QRegExpValidator(QRegExp("^\\s*[01]*\\s*$"), ui->binary));
+    ui->runTarget->setValidator(new QRegExpValidator(QRegExp("^\\s*[0123456789abcdefABCDEF]{0,4}\\s*$"), ui->runTarget));
+    ui->findTarget->setValidator(new QRegExpValidator(QRegExp("^\\s*[0123456789abcdefABCDEF]{0,4}\\s*$"), ui->findTarget));
 
     //connect events
     connect(ui->assembleButton, &QPushButton::clicked, this, &MainWindow::assemble);
@@ -87,7 +91,14 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(ui->actionAbout_Qt, &QAction::triggered, &QApplication::aboutQt);
 
+    connect(ui->stepButton, &QPushButton::clicked, processor, &Processor::stepNextInstruction);
     connect(ui->oneShot, &QPushButton::clicked, processor, &Processor::runFull);
+
+    connect(ui->findTarget, &QLineEdit::editingFinished, this, [&](){
+        unsigned target = ui->findTarget->text().toUInt(nullptr, 16);
+        ui->memTableView->setCurrentIndex(memTable->index((target >> 4) & 0xFFF, target & 0xF));
+    });
+    connect(ui->runTarget, &QLineEdit::editingFinished, this, &MainWindow::runTargetUpdated);
 
     connect(processor, &Processor::accumulatorChanged, this, &MainWindow::accumulatorChanged);
     connect(processor, &Processor::registerBChanged, this, &MainWindow::registerBChanged);
@@ -171,10 +182,17 @@ void MainWindow::assemblyFinished() {
     ui->memoryTab->setDisabled(false);
     if(currentDebugTableModel != emptyDebugTableModel) currentDebugTableModel->deleteLater();
     currentDebugTableModel = new DebugTableModel(this, assembler->instructions);
+    if(assembler->instructions.size() > 0) ui->runTarget->setText(QString::number(assembler->instructions[0].address, 16));
+    else ui->runTarget->setText("");
+    runTargetUpdated();
     ui->debugTableView->setModel(currentDebugTableModel);
     ui->leftWidget->setCurrentWidget(ui->debugTab); //go to debug page if possible
     ui->rightWidget->setCurrentWidget(ui->memoryTab);
     ui->statusbar->showMessage(tr("OK."));
+}
+void MainWindow::runTargetUpdated() {
+    unsigned target = ui->runTarget->text().toUInt(nullptr, 16);
+    processor->setProgramCounter(target & 0xFFFF);
 }
 #include <QTextCursor>
 #include <QTextBlock>
@@ -382,7 +400,17 @@ void MainWindow::registerLChanged() {
     ui->registerL0->setText(getBinDigit(processor->getLRegister(), 0));
     ui->registerHL->setText(getHex16(processor->getHLRegisterPair()));
 }
-void MainWindow::programCounterChanged() {ui->programCounter->setText(getHex16(processor->getProgramCounter()));}
+#include <algorithm>
+void MainWindow::programCounterChanged() {
+    ui->programCounter->setText(getHex16(processor->getProgramCounter()));
+    Instruction dummy; dummy.address = processor->getProgramCounter();
+    //upper_bound can also be used. Both are guaranteed to be O(log n).
+    std::vector<Instruction>::iterator location = std::lower_bound(currentDebugTableModel->list.begin(),
+                                                                     currentDebugTableModel->list.end(),
+                                                                     dummy, InstructionAddressComparator());
+    if(location == currentDebugTableModel->list.end()) currentDebugTableModel->setHighlightedIndex(-1);
+    else currentDebugTableModel->setHighlightedIndex(location - currentDebugTableModel->list.begin());
+}
 void MainWindow::stackPointerChanged() {ui->stackPointer->setText(getHex16(processor->getStackPointer()));}
 void MainWindow::MChanged() {
     ui->MFull->setText(getHex8(processor->getM()));

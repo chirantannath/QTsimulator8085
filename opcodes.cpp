@@ -76,9 +76,9 @@ const opcode SIM        ("SIM",     "SIM",      0x30u,  1);
 const opcode LXI_SP     ("LXI",     "LXI SP",   0x31u,  3);
 const opcode STA        ("STA",     "STA",      0x32u,  3);
 const opcode INX_SP     ("INX",     "INX SP",   0x33u,  1);
-const opcode INR_M      ("INR",     "INR <",    0x34u,  1);
-const opcode DCR_M      ("DCR",     "DCR H",    0x35u,  1);
-const opcode MVI_M      ("MVI",     "MVI H",    0x36u,  2);
+const opcode INR_M      ("INR",     "INR M",    0x34u,  1);
+const opcode DCR_M      ("DCR",     "DCR M",    0x35u,  1);
+const opcode MVI_M      ("MVI",     "MVI M",    0x36u,  2);
 const opcode STC        ("STC",     "STC",      0x37u,  1);
 //Unused instruction                            0x38.
 const opcode DAD_SP     ("DAD",     "DAD SP",   0x39u,  1);

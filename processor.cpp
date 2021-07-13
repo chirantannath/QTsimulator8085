@@ -265,8 +265,8 @@ Processor::Processor(QObject *parent)
     };
     //LXI H, word (load register pair immediate HL); hex machine code 0x21.
     microprograms[LXI_H]    = [&](){
-        e = memory[(pc + 1u) & 0xFFFFu] & 0xFFu; emit registerHChanged();
-        d = memory[(pc + 2u) & 0xFFFFu] & 0xFFu; emit registerLChanged();
+        l = memory[(pc + 1u) & 0xFFFFu] & 0xFFu; emit registerLChanged();
+        h = memory[(pc + 2u) & 0xFFFFu] & 0xFFu; emit registerHChanged();
         emit MChanged();
         pc += 3; pc &= 0xFFFFu; emit programCounterChanged();
     };
@@ -308,7 +308,7 @@ Processor::Processor(QObject *parent)
     };
     //MVI H, byte (move immediate to H); hex machine code 0x26.
     microprograms[MVI_H]    = [&](){
-        h = memory[(pc + 1u) & 0xFFFFu] & 0xFFu; emit registerDChanged(); emit MChanged();
+        h = memory[(pc + 1u) & 0xFFFFu] & 0xFFu; emit registerHChanged(); emit MChanged();
         pc += 2; pc &= 0xFFFFu; emit programCounterChanged();
     };
     //DAA (decimal adjust accumulator); hex machine code 0x27.
@@ -2155,6 +2155,7 @@ void Processor::setTRAPRequest(bool flag) {
 }
 void Processor::setInterruptRequest(bool flag) {intr = flag ? 1u : 0u;}
 void Processor::setINTRVector(data8_t value) {intrVec = (value >> 3) & 7u;}
+void Processor::setProgramCounter(memaddr_t value) {pc = value & 0xFFFF; emit programCounterChanged();}
 void Processor::resetMemory() {
     std::memset((void *)memory, 0, sizeof(data8_t) * MEMORY_SIZE);
     emit memoryBlockUpdated(0u, MEMORY_SIZE);

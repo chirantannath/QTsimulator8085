@@ -37,8 +37,6 @@ furnished to do so, subject to the following conditions:
 class DebugTableModel : public QAbstractTableModel {
     Q_OBJECT
 
-    std::vector<Instruction> list; //Unchangeable. Construct a new object everytime this is changed.
-
     int highlightedIndex = -1;
 
     static QVariant columnHeader(int column, int role) {
@@ -92,6 +90,7 @@ public:
 
     int getHighlighedIndex() const {return highlightedIndex;}
 
+    std::vector<Instruction> list; //Do not change. Construct a new object everytime this is changed.
 public slots:
 
     void setHighlightedIndex(int index);

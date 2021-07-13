@@ -72,12 +72,13 @@ void Editor::highlightCurrentLine() {
 }
 void Editor::setErrorLine(int value) {
     QList<QTextEdit::ExtraSelection> extraSelections;
-    if(value == -1) highlightCurrentLine(); //just call normal
+    if(value < 1) highlightCurrentLine(); //just call normal
     QTextEdit::ExtraSelection selection;
     QColor redColor = QColor(Qt::red).lighter();
     selection.format.setBackground(redColor);
     selection.format.setProperty(QTextFormat::FullWidthSelection, true);
     selection.cursor = textCursor();
+    selection.cursor.setPosition(document()->findBlockByLineNumber(value-1).position());
     selection.cursor.clearSelection();
     extraSelections.append(selection);
     setExtraSelections(extraSelections);

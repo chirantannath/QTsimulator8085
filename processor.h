@@ -266,6 +266,8 @@ public slots:
     ///Sets the RST instruction which is executed on INTR interrupt request. Note that only bits D5, D4, D3 are used
     ///and rest are ignored (the result is the instruction set is always RST 0 through 7).
     void setINTRVector(data8_t value);
+    ///Sets the program counter externally. Emits programCounterChanged() signal.
+    void setProgramCounter(memaddr_t value);
 
     ///Resets entire memory to 0 (all 65,536 bytes, may take time). Fires memoryBlockUpdated() and MChanged() signals.
     void resetMemory();

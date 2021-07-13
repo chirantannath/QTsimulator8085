@@ -43,6 +43,8 @@ private slots:
 
     void assemblyFinished();
 
+    void runTargetUpdated();
+
     void assemblyError(SyntaxError ex);
 
     void sidToggled(bool value);

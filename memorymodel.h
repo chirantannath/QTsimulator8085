@@ -49,6 +49,7 @@ public:
     QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const; //override
 
     bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole); //override
+
 private slots:
 
     void memoryBlockUpdated(memaddr_t startLoc, memsize_t blockSize);
