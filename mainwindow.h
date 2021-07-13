@@ -3,7 +3,7 @@
 
 #include <QMainWindow>
 #include <QString>
-#include <QThread>
+#include <QCloseEvent>
 #include "commdefs.h"
 #include "opcodes.h"
 #include "processor.h"
@@ -11,6 +11,7 @@
 #include "memorymodel.h"
 #include "iomodel.h"
 #include "debugtable.h"
+#include "syntaxhighlighter.h"
 
 //We will use Qt's file handling features because they correctly handle various file encodings (UTF-8 or ISOxxx, etc...)
 #include <QFileInfo>
@@ -32,6 +33,9 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
+
+protected:
+    void closeEvent(QCloseEvent *);
 
 private slots:
 
@@ -66,6 +70,10 @@ private slots:
     void newFile();
 
     void openFile();
+
+    void saveFile();
+
+    void saveFileAs();
 
     ///Fired when the accumulator register is changed.
     void accumulatorChanged();
@@ -120,7 +128,10 @@ private:
     DebugTableModel * const emptyDebugTableModel;
     DebugTableModel *currentDebugTableModel;
     Assembler *assembler;
+    SyntaxHighlighter *highlighter;
     QFileInfo currentlyOpenedFile;
-    QThread backgroundThread;
+    bool isFileModified;
+
+    bool checkUnsaved(); //if false; entire operation is cancelled.
 };
 #endif // MAINWINDOW_H

@@ -18,28 +18,30 @@
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
-    , ui(new Ui::MainWindow), emptyDebugTableModel(new DebugTableModel(this))
+    , ui(new Ui::MainWindow), emptyDebugTableModel(new DebugTableModel(this)), isFileModified(false)
 {
     ui->setupUi(this);
     const int largeLimit = QGuiApplication::primaryScreen()->size().width();
     ui->splitter->setSizes(QList<int>({largeLimit, largeLimit})); //setSizes is relative
+    /*NOTE:
+    Processor was initially meant to live on a separate thread. We don't do that anymore because Processor sends events faster
+    than the main event loop can process them and we run into a memory bottleneck. However, while writing code; still assume
+    Processor and Assembler live in separate threads.
 
-    //Processor lives on the background thread.
-    processor = new Processor();
-    connect(&backgroundThread, &QThread::finished, processor, &QObject::deleteLater);
-
+    We use event progress polling (QCoreApplication::processEvents()) instead to keep the application responsive.
+    */
+    processor = new Processor(this);
     assembler = new Assembler(processor);
+    highlighter = new SyntaxHighlighter(ui->source->document());
     connect(this, &MainWindow::__fireAssemblerEvent, assembler, &Assembler::assemble);
     connect(assembler, &Assembler::assemblyFinished, this, &MainWindow::assemblyFinished);
     connect(assembler, &Assembler::assemblyError, this, &MainWindow::assemblyError);
 
-    processor->moveToThread(&backgroundThread); //do this after processor has all its children.
-
     //Memory and I/O tables
-    memTable = new MemoryTableModel(processor, this);
+    memTable = new MemoryTableModel(processor, processor);
     ui->memTableView->setModel(memTable);
     ui->memTableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
-    ioTable = new IOTableModel(processor, this);
+    ioTable = new IOTableModel(processor, processor);
     ui->ioTableView->setModel(ioTable);
     ui->ioTableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
 
@@ -69,8 +71,21 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->memResetButton, &QPushButton::clicked, processor, &Processor::resetMemory);
     connect(ui->ioResetButton, &QPushButton::clicked, processor, &Processor::resetIOPorts);
     connect(ui->source, &Editor::modificationChanged, this, &MainWindow::fileModified);
+
     connect(ui->actionNew_Source_File, &QAction::triggered, this, &MainWindow::newFile);
     connect(ui->actionOpen_Source_File, &QAction::triggered, this, &MainWindow::openFile);
+    connect(ui->actionSave_Source_File, &QAction::triggered, this, &MainWindow::saveFile);
+    connect(ui->actionSave_Source_File_As, &QAction::triggered, this, &MainWindow::saveFileAs);
+    connect(ui->actionFull_Screen, &QAction::toggled, this, [&](bool flag)
+    {
+        setWindowFlag(Qt::FramelessWindowHint, flag);
+        if(flag) {showFullScreen();} else {showNormal();}
+    });
+    connect(ui->actionExit, &QAction::triggered, this, &MainWindow::close);
+
+    connect(ui->actionAssemble, &QAction::triggered, ui->assembleButton, &QPushButton::clicked);
+
+    connect(ui->actionAbout_Qt, &QAction::triggered, &QApplication::aboutQt);
 
     connect(ui->oneShot, &QPushButton::clicked, processor, &Processor::runFull);
 
@@ -121,15 +136,22 @@ MainWindow::MainWindow(QWidget *parent)
     interruptAcknowledgeStatusChanged();
 
     newFile();
-    backgroundThread.start();
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
-    backgroundThread.quit();
-    backgroundThread.wait();
 }
+
+//protected
+void MainWindow::closeEvent(QCloseEvent *evt) {
+    //do actions here
+    if(!checkUnsaved()) {evt->ignore(); return;}
+    processor->haltExecution();
+    QMainWindow::closeEvent(evt);
+}
+
+//private slots
 
 #include <vector>
 #include <sstream>
@@ -137,14 +159,16 @@ void MainWindow::assemble() {
     ui->statusbar->showMessage(tr("Assembling..."));
     processor->resetAll();
     assembler->in = new std::stringstream(ui->source->toPlainText().toStdString());
-    ui->source->setDisabled(true); //source disabled while assembling
-    ui->memTableView->setDisabled(true); //memory disabled while assembling
+    ui->sourceTab->setDisabled(true); //source disabled while assembling
+    ui->debugTab->setDisabled(true);
+    ui->memoryTab->setDisabled(true); //memory disabled while assembling
     emit __fireAssemblerEvent();
 }
 void MainWindow::assemblyFinished() {
     delete assembler->in;
-    ui->source->setDisabled(false);
-    ui->memTableView->setDisabled(false);
+    ui->sourceTab->setDisabled(false);
+    ui->debugTab->setDisabled(false);
+    ui->memoryTab->setDisabled(false);
     if(currentDebugTableModel != emptyDebugTableModel) currentDebugTableModel->deleteLater();
     currentDebugTableModel = new DebugTableModel(this, assembler->instructions);
     ui->debugTableView->setModel(currentDebugTableModel);
@@ -156,12 +180,14 @@ void MainWindow::assemblyFinished() {
 #include <QTextBlock>
 void MainWindow::assemblyError(SyntaxError ex) {
     delete assembler->in;
-    ui->source->setDisabled(false);
-    ui->memTableView->setDisabled(false);
-    QTextCursor cursor = ui->source->textCursor();
+    ui->sourceTab->setDisabled(false);
+    ui->debugTab->setDisabled(false);
+    ui->memoryTab->setDisabled(false);
+    /*QTextCursor cursor = ui->source->textCursor();
     if(ex.lineNumber > 0) cursor.setPosition(ui->source->document()->findBlockByLineNumber(ex.lineNumber-1).position());
     if(ex.columnNumber > 0) cursor.movePosition(QTextCursor::NextCharacter, QTextCursor::MoveAnchor, ex.columnNumber-1);
-    ui->source->setTextCursor(cursor);
+    ui->source->setTextCursor(cursor);*/
+    ui->source->setErrorLine(ex.lineNumber);
     ui->leftWidget->setCurrentWidget(ui->sourceTab);
     ui->statusbar->showMessage(constructAssemblyError(ex));
 }
@@ -206,22 +232,63 @@ void MainWindow::binaryEdited(const QString &text) {
     ui->decimal->setText(QString::number(value, 10));
 }
 void MainWindow::fileModified(bool modified) {
-    if(modified && !windowTitle().startsWith(QString("*"))) setWindowTitle(QString("*") + windowTitle());
-    else if(!modified && windowTitle().startsWith(QString("*"))) setWindowTitle(windowTitle().right(windowTitle().length() - 1));
+    isFileModified = modified;
+    if(modified && !windowTitle().startsWith(QString("*"))) {setWindowTitle(QString("*") + windowTitle());}
+    else if(!modified && windowTitle().startsWith(QString("*"))) {setWindowTitle(windowTitle().right(windowTitle().length() - 1));}
+}
+#include <QMessageBox>
+bool MainWindow::checkUnsaved() {
+    if(!isFileModified) return true;
+    switch(QMessageBox::question(this, tr("Save Your Changes?")
+                                 , tr("Save your changes to ")
+                                 + ((currentlyOpenedFile.isFile()) ? currentlyOpenedFile.absoluteFilePath() : tr("Untitled"))
+                                 + tr("?")
+                                 , QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel, QMessageBox::Yes)) {
+    case QMessageBox::Yes: saveFile(); return true;
+    case QMessageBox::No: return true;
+    case QMessageBox::Cancel:
+    default: return false;
+    }
 }
 void MainWindow::newFile() {
+    if(!checkUnsaved()) return;
     currentlyOpenedFile = QFileInfo();
-    ui->source->setPlainText(QString(""));
+    ui->source->setPlainText(QString("")); ui->source->document()->setModified(false); fileModified(false);
     setWindowTitle(tr("Untitled: QTSimulator8085"));
 }
 void MainWindow::openFile() {
-    currentlyOpenedFile = QFileInfo(QFileDialog::getOpenFileName(this, tr("Open Source File"), QString(),
-                                                                 tr("8085 Assembly Source Files (*.asm);;All Files (*.*)")));
+    if(!checkUnsaved()) return;
+    QString name = QFileDialog::getOpenFileName(this, tr("Open Source File"), QString(),
+                                                tr("8085 Assembly Source Files (*.asm);;All Files (*.*)"));
+    if(name.isNull()) return; //operation canncelled.
+    currentlyOpenedFile = QFileInfo(name);
     QFile file(currentlyOpenedFile.absoluteFilePath());
     file.open(QIODevice::ReadOnly | QIODevice::Text);
-    ui->source->setPlainText(QTextStream(&file).readAll());
+    ui->source->setPlainText(QTextStream(&file).readAll()); ui->source->document()->setModified(false); fileModified(false);
     file.close();
     setWindowTitle(currentlyOpenedFile.fileName() + tr(": QTSimulator8085"));
+}
+void MainWindow::saveFile() {
+    if(!currentlyOpenedFile.isFile()) {saveFileAs(); return;}
+    QFile file(currentlyOpenedFile.absoluteFilePath());
+    file.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate);
+    QTextStream(&file)<<ui->source->toPlainText();
+    file.close();
+    setWindowTitle(currentlyOpenedFile.fileName() + tr(": QTSimulator8085"));
+    ui->source->document()->setModified(false); fileModified(false);
+}
+void MainWindow::saveFileAs() {
+    if(currentlyOpenedFile.isFile() && !checkUnsaved()) return; //cancelled
+    QString name = QFileDialog::getSaveFileName(this, tr("Save Source File"), QString(),
+                                                tr("8085 Assembly Source Files (*.asm);;All Files (*.*)"));
+    if(name.isNull()) return; //operation cancelled.
+    currentlyOpenedFile = QFileInfo(name);
+    QFile file(currentlyOpenedFile.absoluteFilePath());
+    file.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate);
+    QTextStream(&file)<<ui->source->toPlainText();
+    file.close();
+    setWindowTitle(currentlyOpenedFile.fileName() + tr(": QTSimulator8085"));
+    ui->source->document()->setModified(false); fileModified(false);
 }
 void MainWindow::accumulatorChanged() {
     ui->accumulatorFull->setText(getHex8(processor->getAccumulator()));

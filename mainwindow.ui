@@ -3097,7 +3097,6 @@
      <string>Build</string>
     </property>
     <addaction name="actionAssemble"/>
-    <addaction name="actionAssemble_To"/>
     <addaction name="separator"/>
     <addaction name="actionExecute_Assembled"/>
     <addaction name="actionExecute_At"/>
@@ -3109,6 +3108,7 @@
      <string>Help</string>
     </property>
     <addaction name="actionAbout"/>
+    <addaction name="actionAbout_Qt"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuBuild"/>
@@ -3137,6 +3137,9 @@
   <action name="actionSave_Source_File">
    <property name="text">
     <string>Save Source File</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
    </property>
   </action>
   <action name="actionSave_Source_File_As">
@@ -3192,8 +3195,11 @@
    </property>
   </action>
   <action name="actionFull_Screen">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="text">
     <string>Full Screen</string>
@@ -3214,6 +3220,11 @@
    </property>
    <property name="visible">
     <bool>false</bool>
+   </property>
+  </action>
+  <action name="actionAbout_Qt">
+   <property name="text">
+    <string>About Qt...</string>
    </property>
   </action>
  </widget>

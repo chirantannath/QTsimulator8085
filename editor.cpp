@@ -30,7 +30,7 @@ furnished to do so, subject to the following conditions:
 
 //Editor
 
-Editor::Editor(QWidget *parent) : QPlainTextEdit(parent) {
+Editor::Editor(QWidget *parent) : QPlainTextEdit(parent) /*, errorLine(-1)*/ {
     lineNumberArea = new LineNumberArea(this);
     connect(this, &Editor::blockCountChanged, this, &Editor::updateLineNumberAreaWidth);
     connect(this, &Editor::updateRequest, this, &Editor::updateLineNumberArea);
@@ -68,6 +68,18 @@ void Editor::highlightCurrentLine() {
         selection.cursor.clearSelection();
         extraSelections.append(selection);
     }
+    setExtraSelections(extraSelections);
+}
+void Editor::setErrorLine(int value) {
+    QList<QTextEdit::ExtraSelection> extraSelections;
+    if(value == -1) highlightCurrentLine(); //just call normal
+    QTextEdit::ExtraSelection selection;
+    QColor redColor = QColor(Qt::red).lighter();
+    selection.format.setBackground(redColor);
+    selection.format.setProperty(QTextFormat::FullWidthSelection, true);
+    selection.cursor = textCursor();
+    selection.cursor.clearSelection();
+    extraSelections.append(selection);
     setExtraSelections(extraSelections);
 }
 void Editor::lineNumberAreaPaintEvent(QPaintEvent *event) {

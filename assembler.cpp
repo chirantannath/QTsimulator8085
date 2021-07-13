@@ -24,7 +24,7 @@ furnished to do so, subject to the following conditions:
 //SyntaxError
 
 inline SyntaxError::SyntaxError(const Tokenizer &tok, const char *const what)
-    : lineNumber(tok.lineNumber), columnNumber(tok.columnNumber), position(tok.charNumber), what(what) {}
+    : lineNumber(tok.lineNumber), columnNumber(tok.columnNumber), position(tok.charNumber()), what(what) {}
 
 //Tokenizer
 
@@ -82,7 +82,6 @@ Tokenizer::TokenType Tokenizer::getNextToken() {
     return ttype = CHAR_ERROR; //unrecognized character
 }
 char Tokenizer::getNextChar() {
-    charNumber++;
     if(putbackBuffer.empty()) return in.get();
     else {
         char temp = putbackBuffer.top();
@@ -487,12 +486,14 @@ Assembler::Assembler(Processor *proc) : QObject(proc), processor(proc), in(nullp
     pseudocodeProcessors.insert({&DATA, [&](Instruction &i, memaddr_t &) {processor->overwrite(i.extraOperands.data(), i.operand & 0xFFFFu, i.extraOperands.size());}});
 }
 #include <algorithm>
+#include <QCoreApplication>
 void Assembler::doAssembly() {
     Tokenizer tok(*in); LineTranslator translator(tok); memaddr_t targetOffset = 0;
     std::map<std::string, size_t, StringInsensitive> labelTable; //table for labels to instructions (index references stored)
     instructions.clear();
     //Put addresses to instructions
     do {
+        QCoreApplication::processEvents();
         Instruction i = translator.translateOneLine();
         if(i.code == nullptr) continue;
         else if(i.code->isPseudocode) {
@@ -503,17 +504,19 @@ void Assembler::doAssembly() {
         if(!i.label.empty()) labelTable.insert({i.label, instructions.size()-1u});
     } while (tok.ttype != Tokenizer::END_OF_FILE);
     //Put target operand addresses for JMPs and CALLs.
-    for(size_t i = 0; i < instructions.size(); i++)
+    for(size_t i = 0; i < instructions.size(); i++) {
+        QCoreApplication::processEvents();
         if(!instructions[i].toLabel.empty()) {
             std::map<std::string, size_t, StringInsensitive>::iterator node = labelTable.find(instructions[i].toLabel);
             if(node == labelTable.end()) throw SyntaxError(instructions[i].lineNumber, 0, 0, "Target label not found");
             instructions[i].operand = (data16_t) (instructions[node->second].address & 0xFFFFu);
         }
-
+    }
     std::stable_sort(instructions.begin(), instructions.end(), InstructionAddressComparator()); //sort according to instruction addresses.
 
     //Put instructions into processor memory.
     for(size_t i = 0; i < instructions.size(); i++) {
+        QCoreApplication::processEvents();
         data8_t buf[3]; buf[0] = instructions[i].code->code;
         if(instructions[i].code->bytesRequired >= 2) buf[1] = (data8_t)(instructions[i].operand & 0xFFu);
         if(instructions[i].code->bytesRequired == 3) buf[2] = (data8_t)((instructions[i].operand >> 8) & 0xFFu);

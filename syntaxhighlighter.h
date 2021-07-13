@@ -19,65 +19,28 @@ furnished to do so, subject to the following conditions:
     LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
     OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
     SOFTWARE.*/
-#ifndef EDITOR_H
-#define EDITOR_H
+#ifndef SYNTAXHIGHLIGHTER_H
+#define SYNTAXHIGHLIGHTER_H
 
-#include <QPlainTextEdit>
+#include <QSyntaxHighlighter>
+#include <QTextDocument>
+#include <QColor>
+#include <QFont>
+#include <QTextCharFormat>
 #include <QObject>
-#include <QWidget>
-#include <QPaintEvent>
-#include <QResizeEvent>
-#include <QRect>
-#include <QSize>
+#include <QString>
+#include <unordered_map>
+#include "assembler.h"
 
-///GUI component used to edit source code. Provides syntax and line higlighting, and line numbering.
-class Editor : public QPlainTextEdit {
+class SyntaxHighlighter : public QSyntaxHighlighter
+{
     Q_OBJECT
+
+    std::unordered_map<Tokenizer::TokenType, QTextCharFormat> highlightingRules;
 public:
-
-    Editor(QWidget *parent = nullptr);
-
-    void lineNumberAreaPaintEvent(QPaintEvent *event);
-
-    int lineNumberAreaWidth();
-
+    SyntaxHighlighter(QTextDocument *parent = nullptr);
 protected:
-
-    void resizeEvent(QResizeEvent *event); //override
-
-private slots:
-
-    void updateLineNumberAreaWidth(int);
-
-    void highlightCurrentLine();
-
-    void updateLineNumberArea(const QRect &rect, int dy);
-
-public slots:
-
-    void setErrorLine(int);
-
-private:
-
-    QWidget *lineNumberArea;
-    //int errorLine;
+    void highlightBlock(const QString &);
 };
 
-class LineNumberArea : public QWidget {
-    Q_OBJECT
-public:
-
-    LineNumberArea(Editor *editor) : QWidget(editor), editor(editor) {}
-
-    QSize sizeHint() const {return QSize(editor->lineNumberAreaWidth(), 0);} //override
-
-protected:
-
-    void paintEvent(QPaintEvent *event) {editor->lineNumberAreaPaintEvent(event);} //override
-
-private:
-
-    Editor *editor;
-};
-
-#endif // EDITOR_H
+#endif // SYNTAXHIGHLIGHTER_H

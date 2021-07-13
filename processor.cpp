@@ -2075,6 +2075,8 @@ void Processor::runFull() {
     while(!halt && !unused && stepNextInstruction());
     halt = unused = 0u;
 }
+#include <QThread>
+#include <QCoreApplication>
 bool Processor::stepNextInstruction() {
     microprograms[memory[pc & 0xFFFFu] & 0xFFu]();
     //Check HALT
@@ -2124,7 +2126,9 @@ bool Processor::stepNextInstruction() {
             pc = (intrVec << 3) & 0xFFFFu; emit programCounterChanged();
         }
     }
-    emit stepped(); return true;
+    emit stepped();
+    QCoreApplication::processEvents(); //push GUI events
+    return true;
 }
 Processor::~Processor() {
     delete[] microprograms;

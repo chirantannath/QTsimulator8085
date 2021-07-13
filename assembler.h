@@ -84,13 +84,13 @@ struct SyntaxError : public QException {
     ///Column number at which the error occured.
     const unsigned columnNumber;
     ///Character position at which the error occured.
-    const unsigned position;
+    const int position;
     ///Error message (always an in-program hardcoded string)
     const char * const what;
     ///Default constructor
     SyntaxError() : lineNumber(0u), columnNumber(0u), position(0u), what("") {};
     ///Constructor with correct parameters
-    SyntaxError(unsigned lineNumber, unsigned columnNumber, unsigned position, const char *const what) :
+    SyntaxError(unsigned lineNumber, unsigned columnNumber, int position, const char *const what) :
         lineNumber(lineNumber), columnNumber(columnNumber), position(position), what(what) {}
     ///Convenience constructor to take current state from a tokenizer
     inline SyntaxError(const Tokenizer &tok, const char *const what);
@@ -145,15 +145,15 @@ struct Tokenizer {
     unsigned lineNumber;
     ///Current column number
     unsigned columnNumber;
-    ///Current character number
-    size_t charNumber;
+    ///Position in stream. Casts are necessary; return -1 if we have reached end.
+    int charNumber() const {return in.tellg() > 0 ? (int)in.tellg() - (int)putbackBuffer.size() : -1;}
 
     ///Constructor
-    Tokenizer(std::istream &in) : token(""), in(in), ttype(NONE), lineNumber(1u), columnNumber(1u), charNumber(0u) {}
+    explicit Tokenizer(std::istream &in) : token(""), in(in), ttype(NONE), lineNumber(1u), columnNumber(1u) {}
 
     ///Obtain next token
     TokenType getNextToken();
-private:
+
     ///local putback buffer.
     std::stack<char> putbackBuffer;
     ///Get next character from stream
@@ -161,7 +161,7 @@ private:
     ///Peek next character from stream
     char peekNextChar();
     ///Push next character (unget) to stream
-    void putBackChar(char ch) {charNumber--; putbackBuffer.push(ch);}
+    void putBackChar(char ch) {putbackBuffer.push(ch);}
     ///Is stream good?
     bool isGood() {return putbackBuffer.empty() ? in.good() : true;}
     ///We have reached end of file or not

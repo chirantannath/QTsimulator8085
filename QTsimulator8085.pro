@@ -18,7 +18,8 @@ SOURCES += \
     mainwindow.cpp \
     memorymodel.cpp \
     opcodes.cpp \
-    processor.cpp
+    processor.cpp \
+    syntaxhighlighter.cpp
 
 HEADERS += \
     assembler.h \
@@ -29,7 +30,8 @@ HEADERS += \
     mainwindow.h \
     memorymodel.h \
     opcodes.h \
-    processor.h
+    processor.h \
+    syntaxhighlighter.h
 
 FORMS += \
     mainwindow.ui
