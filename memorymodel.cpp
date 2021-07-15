@@ -22,18 +22,36 @@ furnished to do so, subject to the following conditions:
 #include <QString>
 #include <QVector>
 #include <QFont>
+#include <QBrush>
 #include "memorymodel.h"
 
 //MemoryTableModel
+const QColor MemoryTableModel::pc = QColor::fromRgbF(0.75, 0.25, 0.25, 0.25); //red
+const QColor MemoryTableModel::bc = QColor::fromRgbF(0.25, 0.75, 0.25, 0.25); //green
+const QColor MemoryTableModel::de = QColor::fromRgbF(0.75, 0.75, 0.25, 0.25); //yellow
+const QColor MemoryTableModel::hl = QColor::fromRgbF(0.50, 0.50, 0.50, 0.25); //grey-ish
+const QColor MemoryTableModel::sp = QColor::fromRgbF(0.25, 0.25, 0.75, 0.25); //blue
 
 MemoryTableModel::MemoryTableModel(Processor *proc, QObject *parent) : QAbstractTableModel(parent), processor(proc) {
     connect(processor, &Processor::memoryBlockUpdated, this, &MemoryTableModel::memoryBlockUpdated);
+    connect(processor, &Processor::programCounterChanged, this, &MemoryTableModel::pcChanged);
+    connect(processor, &Processor::stackPointerChanged, this, &MemoryTableModel::spChanged);
+    connect(processor, &Processor::registerBChanged, this, &MemoryTableModel::bcChanged);
+    connect(processor, &Processor::registerCChanged, this, &MemoryTableModel::bcChanged);
+    connect(processor, &Processor::registerDChanged, this, &MemoryTableModel::deChanged);
+    connect(processor, &Processor::registerEChanged, this, &MemoryTableModel::deChanged);
+    connect(processor, &Processor::registerHChanged, this, &MemoryTableModel::hlChanged);
+    connect(processor, &Processor::registerLChanged, this, &MemoryTableModel::hlChanged);
+
+    oldPC = processor->getProgramCounter(); oldBC = processor->getBCRegisterPair(); oldDE = processor->getDERegisterPair();
+    oldHL = processor->getHLRegisterPair(); oldSP = processor->getStackPointer();
 }
 Qt::ItemFlags MemoryTableModel::flags(const QModelIndex &index) const {//override
     Qt::ItemFlags superFlags = QAbstractTableModel::flags(index);
     return index.isValid() ? superFlags | Qt::ItemIsEditable : superFlags; //headers are not editable
 }
 QVariant MemoryTableModel::data(const QModelIndex &index, int role) const {//override
+    QBrush brush; brush.setStyle(Qt::Dense3Pattern);
     if(!index.isValid()) return QVariant(); //invalid. We return headers in headerData().
     memaddr_t address = (memaddr_t)(((index.row() << 4) + index.column()) & 0xFFFF);
     switch(role) {
@@ -48,7 +66,66 @@ QVariant MemoryTableModel::data(const QModelIndex &index, int role) const {//ove
 
     case Qt::TextAlignmentRole: return QVariant(Qt::AlignCenter);
 
+    case Qt::BackgroundRole:
+        if(address == processor->getProgramCounter()) brush.setColor(pc);
+        else if(address == processor->getHLRegisterPair()) brush.setColor(hl);
+        else if(address == processor->getStackPointer()) brush.setColor(sp);
+        else if(address == processor->getBCRegisterPair()) brush.setColor(bc);
+        else if(address == processor->getDERegisterPair()) brush.setColor(de);
+        else return QVariant(); //default if none match
+        return QVariant(brush);
+
     default: return QVariant(); //use default for rest
+    }
+}
+void MemoryTableModel::pcChanged() {
+    QVector<int> roles(1, Qt::BackgroundRole);
+    if(oldPC != processor->getProgramCounter()) {
+        emit dataChanged(createIndex((oldPC >> 4) & 0xFFFu, oldPC & 0xFu),
+                         createIndex((oldPC >> 4) & 0xFFFu, oldPC & 0xFu), roles);
+        oldPC = processor->getProgramCounter();
+        emit dataChanged(createIndex((oldPC >> 4) & 0xFFFu, oldPC & 0xFu),
+                         createIndex((oldPC >> 4) & 0xFFFu, oldPC & 0xFu), roles);
+    }
+}
+void MemoryTableModel::bcChanged() {
+    QVector<int> roles(1, Qt::BackgroundRole);
+    if(oldBC != processor->getBCRegisterPair()) {
+        emit dataChanged(createIndex((oldBC >> 4) & 0xFFFu, oldBC & 0xFu),
+                         createIndex((oldBC >> 4) & 0xFFFu, oldBC & 0xFu), roles);
+        oldBC = processor->getBCRegisterPair();
+        emit dataChanged(createIndex((oldBC >> 4) & 0xFFFu, oldBC & 0xFu),
+                         createIndex((oldBC >> 4) & 0xFFFu, oldBC & 0xFu), roles);
+    }
+}
+void MemoryTableModel::deChanged() {
+    QVector<int> roles(1, Qt::BackgroundRole);
+    if(oldDE != processor->getDERegisterPair()) {
+        emit dataChanged(createIndex((oldDE >> 4) & 0xFFFu, oldDE & 0xFu),
+                         createIndex((oldDE >> 4) & 0xFFFu, oldDE & 0xFu), roles);
+        oldDE = processor->getDERegisterPair();
+        emit dataChanged(createIndex((oldDE >> 4) & 0xFFFu, oldDE & 0xFu),
+                         createIndex((oldDE >> 4) & 0xFFFu, oldDE & 0xFu), roles);
+    }
+}
+void MemoryTableModel::hlChanged() {
+    QVector<int> roles(1, Qt::BackgroundRole);
+    if(oldHL != processor->getHLRegisterPair()) {
+        emit dataChanged(createIndex((oldHL >> 4) & 0xFFFu, oldHL & 0xFu),
+                         createIndex((oldHL >> 4) & 0xFFFu, oldHL & 0xFu), roles);
+        oldHL = processor->getHLRegisterPair();
+        emit dataChanged(createIndex((oldHL >> 4) & 0xFFFu, oldHL & 0xFu),
+                         createIndex((oldHL >> 4) & 0xFFFu, oldHL & 0xFu), roles);
+    }
+}
+void MemoryTableModel::spChanged() {
+    QVector<int> roles(1, Qt::BackgroundRole);
+    if(oldSP != processor->getStackPointer()) {
+        emit dataChanged(createIndex((oldSP >> 4) & 0xFFFu, oldSP & 0xFu),
+                         createIndex((oldSP >> 4) & 0xFFFu, oldSP & 0xFu), roles);
+        oldSP = processor->getStackPointer();
+        emit dataChanged(createIndex((oldSP >> 4) & 0xFFFu, oldSP & 0xFu),
+                         createIndex((oldSP >> 4) & 0xFFFu, oldSP & 0xFu), roles);
     }
 }
 int MemoryTableModel::rowCount(const QModelIndex &parent) const {return parent.isValid() ? 0 : 0xFFF+1;} //override

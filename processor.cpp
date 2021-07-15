@@ -75,7 +75,7 @@ Processor::Processor(QObject *parent)
     //DCR B (decrement register B); hex machine code 0x05.
     microprograms[DCR_B]    = [&](){
         data8_calc_t temp = b+NEGATE8(1u); temp &= 0xFFu;
-        SET_SPEC_FLAG(f, AUXILIARY_CARRY_FLAG, ((b & 0x0Fu) - 1u) > 0x0Fu); temp &= 0xFFu;
+        SET_SPEC_FLAG(f, AUXILIARY_CARRY_FLAG, (b & 0x0Fu) < 1u); temp &= 0xFFu;
         SET_SPEC_FLAG(f, ZERO_FLAG, temp == 0u);
         SET_SPEC_FLAG(f, SIGN_FLAG, (temp & 0x80u) == 0x80u);
         SET_SPEC_FLAG(f, PARITY_FLAG, PARITY_LOOKUP[temp]);
@@ -128,7 +128,7 @@ Processor::Processor(QObject *parent)
     //DCR C (decrement register C); hex machine code 0x0D.
     microprograms[DCR_C]    = [&](){
         data8_calc_t temp = c+NEGATE8(1u); temp &= 0xFFu;
-        SET_SPEC_FLAG(f, AUXILIARY_CARRY_FLAG, ((c & 0x0Fu) - 1u) > 0x0Fu); temp &= 0xFFu;
+        SET_SPEC_FLAG(f, AUXILIARY_CARRY_FLAG, (c & 0x0Fu) < 1u); temp &= 0xFFu;
         SET_SPEC_FLAG(f, ZERO_FLAG, temp == 0u);
         SET_SPEC_FLAG(f, SIGN_FLAG, (temp & 0x80u) == 0x80u);
         SET_SPEC_FLAG(f, PARITY_FLAG, PARITY_LOOKUP[temp]);
@@ -181,7 +181,7 @@ Processor::Processor(QObject *parent)
     //DCR D (decrement register D); hex machine code 0x15.
     microprograms[DCR_D]    = [&](){
         data8_calc_t temp = d+NEGATE8(1u); temp &= 0xFFu;
-        SET_SPEC_FLAG(f, AUXILIARY_CARRY_FLAG, ((d & 0x0Fu) - 1u) > 0x0Fu); temp &= 0xFFu;
+        SET_SPEC_FLAG(f, AUXILIARY_CARRY_FLAG, (d & 0x0Fu) < 1); temp &= 0xFFu;
         SET_SPEC_FLAG(f, ZERO_FLAG, temp == 0u);
         SET_SPEC_FLAG(f, SIGN_FLAG, (temp & 0x80u) == 0x80u);
         SET_SPEC_FLAG(f, PARITY_FLAG, PARITY_LOOKUP[temp]);
@@ -235,7 +235,7 @@ Processor::Processor(QObject *parent)
     //DCR E (decrement register E); hex machine code 0x1D.
     microprograms[DCR_E]    = [&](){
         data8_calc_t temp = e+NEGATE8(1u); temp &= 0xFFu;
-        SET_SPEC_FLAG(f, AUXILIARY_CARRY_FLAG, ((e & 0x0Fu) - 1u) > 0x0Fu); temp &= 0xFFu;
+        SET_SPEC_FLAG(f, AUXILIARY_CARRY_FLAG, (e & 0x0Fu) < 1u); temp &= 0xFFu;
         SET_SPEC_FLAG(f, ZERO_FLAG, temp == 0u);
         SET_SPEC_FLAG(f, SIGN_FLAG, (temp & 0x80u) == 0x80u);
         SET_SPEC_FLAG(f, PARITY_FLAG, PARITY_LOOKUP[temp]);
@@ -298,7 +298,7 @@ Processor::Processor(QObject *parent)
     //DCR H (decrement register H); hex machine code 0x25.
     microprograms[DCR_H]    = [&](){
         data8_calc_t temp = h+NEGATE8(1u); temp &= 0xFFu;
-        SET_SPEC_FLAG(f, AUXILIARY_CARRY_FLAG, ((h & 0x0Fu) - 1u) > 0x0Fu); temp &= 0xFFu;
+        SET_SPEC_FLAG(f, AUXILIARY_CARRY_FLAG, (h & 0x0Fu) < 1u); temp &= 0xFFu;
         SET_SPEC_FLAG(f, ZERO_FLAG, temp == 0u);
         SET_SPEC_FLAG(f, SIGN_FLAG, (temp & 0x80u) == 0x80u);
         SET_SPEC_FLAG(f, PARITY_FLAG, PARITY_LOOKUP[temp]);
@@ -360,7 +360,7 @@ Processor::Processor(QObject *parent)
     //DCR L (decrement register L); hex machine code 0x2D.
     microprograms[DCR_L]    = [&](){
         data8_calc_t temp = l+NEGATE8(1u); temp &= 0xFFu;
-        SET_SPEC_FLAG(f, AUXILIARY_CARRY_FLAG, ((l & 0x0Fu) - 1u) > 0x0Fu); temp &= 0xFFu;
+        SET_SPEC_FLAG(f, AUXILIARY_CARRY_FLAG, (l & 0x0Fu) < 1u); temp &= 0xFFu;
         SET_SPEC_FLAG(f, ZERO_FLAG, temp == 0u);
         SET_SPEC_FLAG(f, SIGN_FLAG, (temp & 0x80u) == 0x80u);
         SET_SPEC_FLAG(f, PARITY_FLAG, PARITY_LOOKUP[temp]);
@@ -421,7 +421,7 @@ Processor::Processor(QObject *parent)
     //DCR M (decrement memory); hex machine code 0x35.
     microprograms[DCR_M]    = [&](){
         data8_calc_t temp = memory[PACK(h, l)]+NEGATE8(1u); temp &= 0xFFu;
-        SET_SPEC_FLAG(f, AUXILIARY_CARRY_FLAG, ((memory[PACK(h, l)] & 0x0Fu) - 1u) > 0x0Fu); temp &= 0xFFu;
+        SET_SPEC_FLAG(f, AUXILIARY_CARRY_FLAG, (memory[PACK(h, l)] & 0x0Fu) < 1u); temp &= 0xFFu;
         SET_SPEC_FLAG(f, ZERO_FLAG, temp == 0u);
         SET_SPEC_FLAG(f, SIGN_FLAG, (temp & 0x80u) == 0x80u);
         SET_SPEC_FLAG(f, PARITY_FLAG, PARITY_LOOKUP[temp]);
@@ -472,7 +472,7 @@ Processor::Processor(QObject *parent)
     //DCR A (decrement accumulator); hex machine code 0x3D.
     microprograms[DCR_A]    = [&](){
         data8_calc_t temp = a+NEGATE8(1u); temp &= 0xFFu;
-        SET_SPEC_FLAG(f, AUXILIARY_CARRY_FLAG, ((a & 0x0Fu) - 1u) > 0x0Fu); temp &= 0xFFu;
+        SET_SPEC_FLAG(f, AUXILIARY_CARRY_FLAG, (a & 0x0Fu) < 1u); temp &= 0xFFu;
         SET_SPEC_FLAG(f, ZERO_FLAG, temp == 0u);
         SET_SPEC_FLAG(f, SIGN_FLAG, (temp & 0x80u) == 0x80u);
         SET_SPEC_FLAG(f, PARITY_FLAG, PARITY_LOOKUP[temp]);
@@ -839,9 +839,9 @@ Processor::Processor(QObject *parent)
     };
     //ADD H (add register H to accumulator); hex machine code 0x84.
     microprograms[ADD_H]    = [&](){
-        data8_calc_t temp = a + e;
+        data8_calc_t temp = a + h;
         SET_SPEC_FLAG(f, CARRY_FLAG, temp > 0xFFu); temp &= 0xFFu;
-        SET_SPEC_FLAG(f, AUXILIARY_CARRY_FLAG, ((a & 0xFu) + (e & 0xFu)) > 0xFu);
+        SET_SPEC_FLAG(f, AUXILIARY_CARRY_FLAG, ((a & 0xFu) + (h & 0xFu)) > 0xFu);
         SET_SPEC_FLAG(f, ZERO_FLAG, temp == 0u);
         SET_SPEC_FLAG(f, SIGN_FLAG, (temp & 0x80u) == 0x80u);
         SET_SPEC_FLAG(f, PARITY_FLAG, PARITY_LOOKUP[temp]);
@@ -1796,7 +1796,7 @@ Processor::Processor(QObject *parent)
     //POP H (pop HL from stack); hex machine code 0xE1.
     microprograms[POP_H]    = [&](){
         l = memory[sp & 0xFFFFu]; sp++; emit registerLChanged();
-        h = memory[sp & 0xFFFFu]; sp++; emit registerDChanged(); emit MChanged();
+        h = memory[sp & 0xFFFFu]; sp++; emit registerHChanged(); emit MChanged();
         sp &= 0xFFFFu; emit stackPointerChanged();
         pc++; pc &= 0xFFFFu; emit programCounterChanged();
     };
@@ -2052,6 +2052,11 @@ Processor::Processor(QObject *parent)
         pc = 56u; emit programCounterChanged();
     };
 }
+Processor::~Processor() {
+    delete[] microprograms;
+    delete[] memory;
+    delete[] io;
+}
 void Processor::copyTo(data8_t *const dest, memaddr_t startLoc, memsize_t length) const {
     memaddr_t srcAddr; memsize_t destLoc;
     for(srcAddr = startLoc & 0xFFFFu, destLoc = 0; destLoc < length; srcAddr++, srcAddr &= 0xFFFFu, destLoc++)
@@ -2129,11 +2134,6 @@ bool Processor::stepNextInstruction() {
     emit stepped();
     QCoreApplication::processEvents(); //push GUI events
     return true;
-}
-Processor::~Processor() {
-    delete[] microprograms;
-    delete[] memory;
-    delete[] io;
 }
 void Processor::setMemoryByte(memaddr_t address, data8_t data) {
     address &= 0xFFFFu; data &= 0xFFu;

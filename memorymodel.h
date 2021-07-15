@@ -27,6 +27,7 @@ furnished to do so, subject to the following conditions:
 #include <QModelIndex>
 #include <Qt>
 #include <QVariant>
+#include <QColor>
 #include "commdefs.h"
 #include "processor.h"
 ///Rows are of the form xxx0 (where xxx is hexadecimal; for eg. 2220, 2310, etc...
@@ -54,6 +55,16 @@ private slots:
 
     void memoryBlockUpdated(memaddr_t startLoc, memsize_t blockSize);
 
+    void pcChanged();
+
+    void bcChanged();
+
+    void deChanged();
+
+    void hlChanged();
+
+    void spChanged();
+
 private:
 
     Processor *processor;
@@ -76,6 +87,9 @@ private:
         default: return QVariant();
         }
     }
+
+    static const QColor pc, bc, de, hl, sp;
+    volatile memaddr_t oldPC, oldBC, oldDE, oldHL, oldSP;
 };
 
 #endif // MEMORYTABLEMODEL_H

@@ -73,6 +73,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->binary, &QLineEdit::textEdited, this, &MainWindow::binaryEdited);
     connect(ui->RESET_IN, &QPushButton::clicked, processor, &Processor::RESET_IN);
     connect(ui->memResetButton, &QPushButton::clicked, processor, &Processor::resetMemory);
+    connect(ui->memResetButton, &QPushButton::clicked, this, &MainWindow::clearDebugTable);
     connect(ui->ioResetButton, &QPushButton::clicked, processor, &Processor::resetIOPorts);
     connect(ui->source, &Editor::modificationChanged, this, &MainWindow::fileModified);
 
@@ -91,6 +92,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(ui->actionAbout_Qt, &QAction::triggered, &QApplication::aboutQt);
 
+    connect(ui->actionStep_One_Instruction, &QAction::triggered, ui->stepButton, &QPushButton::clicked);
     connect(ui->stepButton, &QPushButton::clicked, processor, &Processor::stepNextInstruction);
     connect(ui->oneShot, &QPushButton::clicked, processor, &Processor::runFull);
 
@@ -98,6 +100,18 @@ MainWindow::MainWindow(QWidget *parent)
         unsigned target = ui->findTarget->text().toUInt(nullptr, 16);
         ui->memTableView->setCurrentIndex(memTable->index((target >> 4) & 0xFFF, target & 0xF));
     });
+    connect(ui->findPC, &QPushButton::clicked, this,
+            [&](){ui->memTableView->setCurrentIndex(memTable->index((processor->getProgramCounter() >> 4) & 0xFFF, processor->getProgramCounter() & 0xF));});
+    connect(ui->findHL, &QPushButton::clicked, this,
+            [&](){ui->memTableView->setCurrentIndex(memTable->index((processor->getHLRegisterPair() >> 4) & 0xFFF, processor->getHLRegisterPair() & 0xF));});
+    connect(ui->findSP, &QPushButton::clicked, this,
+            [&](){ui->memTableView->setCurrentIndex(memTable->index((processor->getStackPointer() >> 4) & 0xFFF, processor->getStackPointer() & 0xF));});
+    connect(ui->findBC, &QPushButton::clicked, this,
+            [&](){ui->memTableView->setCurrentIndex(memTable->index((processor->getBCRegisterPair() >> 4) & 0xFFF, processor->getBCRegisterPair() & 0xF));});
+    connect(ui->findDE, &QPushButton::clicked, this,
+            [&](){ui->memTableView->setCurrentIndex(memTable->index((processor->getDERegisterPair() >> 4) & 0xFFF, processor->getDERegisterPair() & 0xF));});
+
+
     connect(ui->runTarget, &QLineEdit::editingFinished, this, &MainWindow::runTargetUpdated);
 
     connect(processor, &Processor::accumulatorChanged, this, &MainWindow::accumulatorChanged);
@@ -111,6 +125,8 @@ MainWindow::MainWindow(QWidget *parent)
     connect(processor, &Processor::programCounterChanged, this, &MainWindow::programCounterChanged);
     connect(processor, &Processor::stackPointerChanged, this, &MainWindow::stackPointerChanged);
     connect(processor, &Processor::MChanged, this, &MainWindow::MChanged);
+    connect(processor, &Processor::memoryBlockUpdated, this, &MainWindow::memoryBlockUpdated);
+    connect(processor, &Processor::ioPortUpdated, this, &MainWindow::ioPortUpdated);
     connect(processor, &Processor::serialOutput, this, &MainWindow::serialOutput);
     connect(processor, &Processor::restart7_5RequestStatusChanged, this, &MainWindow::restart7_5RequestStatusChanged);
     connect(processor, &Processor::maskRestart7_5Changed, this, &MainWindow::maskRestart7_5Changed);
@@ -189,6 +205,13 @@ void MainWindow::assemblyFinished() {
     ui->leftWidget->setCurrentWidget(ui->debugTab); //go to debug page if possible
     ui->rightWidget->setCurrentWidget(ui->memoryTab);
     ui->statusbar->showMessage(tr("OK."));
+}
+void MainWindow::clearDebugTable() {
+    if(currentDebugTableModel != emptyDebugTableModel) {
+        currentDebugTableModel->deleteLater();
+        currentDebugTableModel = emptyDebugTableModel;
+        ui->debugTableView->setModel(currentDebugTableModel);
+    }
 }
 void MainWindow::runTargetUpdated() {
     unsigned target = ui->runTarget->text().toUInt(nullptr, 16);
@@ -403,13 +426,18 @@ void MainWindow::registerLChanged() {
 #include <algorithm>
 void MainWindow::programCounterChanged() {
     ui->programCounter->setText(getHex16(processor->getProgramCounter()));
+    if(ui->followPC->isChecked())
+        ui->memTableView->setCurrentIndex(memTable->index((processor->getProgramCounter() >> 4) & 0xFFF, processor->getProgramCounter() & 0xF));
     Instruction dummy; dummy.address = processor->getProgramCounter();
     //upper_bound can also be used. Both are guaranteed to be O(log n).
     std::vector<Instruction>::iterator location = std::lower_bound(currentDebugTableModel->list.begin(),
                                                                      currentDebugTableModel->list.end(),
                                                                      dummy, InstructionAddressComparator());
-    if(location == currentDebugTableModel->list.end()) currentDebugTableModel->setHighlightedIndex(-1);
-    else currentDebugTableModel->setHighlightedIndex(location - currentDebugTableModel->list.begin());
+    if(location == currentDebugTableModel->list.end() || location->address != processor->getProgramCounter()) currentDebugTableModel->setHighlightedIndex(-1);
+    else {
+        currentDebugTableModel->setHighlightedIndex(location - currentDebugTableModel->list.begin());
+        ui->debugTableView->setCurrentIndex(currentDebugTableModel->index(location - currentDebugTableModel->list.begin(), 2));
+    }
 }
 void MainWindow::stackPointerChanged() {ui->stackPointer->setText(getHex16(processor->getStackPointer()));}
 void MainWindow::MChanged() {
@@ -422,6 +450,11 @@ void MainWindow::MChanged() {
     ui->M2->setText(getBinDigit(processor->getM(), 2));
     ui->M1->setText(getBinDigit(processor->getM(), 1));
     ui->M0->setText(getBinDigit(processor->getM(), 0));
+}
+void MainWindow::memoryBlockUpdated(memaddr_t startLoc, memsize_t) {ui->memTableView->setCurrentIndex(memTable->index((startLoc >> 4) & 0xFFF, startLoc & 0xF));}
+void MainWindow::ioPortUpdated(ioaddr_t address) {
+    ui->ioTableView->setCurrentIndex(ioTable->index((address >> 4) & 0xF, address & 0xF));
+    ui->rightWidget->setCurrentWidget(ui->ioTab);
 }
 void MainWindow::serialOutput() {ui->sod->setText(QString(processor->serialOutputDataLatch() ? "1" : "0"));}
 void MainWindow::restart7_5RequestStatusChanged() {ui->r7_5->setChecked(processor->isRestart7_5Requested());}

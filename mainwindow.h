@@ -47,6 +47,8 @@ private slots:
 
     void assemblyError(SyntaxError ex);
 
+    void clearDebugTable();
+
     void sidToggled(bool value);
 
     void trapToggled(bool value);
@@ -100,6 +102,12 @@ private slots:
     ///Fired when the value of pseudo register M changes (either by a direct write, by modifying registers H or L, or
     ///by external memory writes).
     void MChanged();
+    ///Fired when a portion of the memory to this processor changes. It is guaranteed that startLoc will be always
+    ///within the range 0x0000 to 0xFFFF inclusive, and blockSize will be within the range 0x0000 and 0x10000
+    ///inclusive.
+    void memoryBlockUpdated(memaddr_t startLoc,memsize_t blockSize);
+    ///Fired when the value stored in an I/O port latch (indicated by address) is updated.
+    void ioPortUpdated(ioaddr_t address);
     ///Fired when this processor executes a SIM instruction and a serial output bit is sent on SOD latch.
     void serialOutput();
     ///Fired when the request status latch for RST 7.5 is changed.

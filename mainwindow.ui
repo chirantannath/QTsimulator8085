@@ -27,7 +27,7 @@
       </property>
       <widget class="QTabWidget" name="leftWidget">
        <property name="currentIndex">
-        <number>1</number>
+        <number>0</number>
        </property>
        <widget class="QWidget" name="sourceTab">
         <attribute name="title">
@@ -111,6 +111,9 @@
            </item>
            <item>
             <widget class="QPushButton" name="haltButton">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
              <property name="text">
               <string>Halt</string>
              </property>
@@ -3041,6 +3044,13 @@
             <widget class="QLineEdit" name="findTarget"/>
            </item>
            <item>
+            <widget class="QCheckBox" name="followPC">
+             <property name="text">
+              <string>Follow Program Counter</string>
+             </property>
+            </widget>
+           </item>
+           <item>
             <spacer name="horizontalSpacer_4">
              <property name="orientation">
               <enum>Qt::Horizontal</enum>
@@ -3059,6 +3069,58 @@
               <string>Reset Memory</string>
              </property>
             </widget>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout_7">
+           <item>
+            <widget class="QPushButton" name="findPC">
+             <property name="text">
+              <string>Find PC</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="findHL">
+             <property name="text">
+              <string>Find HL</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="findSP">
+             <property name="text">
+              <string>Find SP</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="findBC">
+             <property name="text">
+              <string>Find BC</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="findDE">
+             <property name="text">
+              <string>Find DE</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="horizontalSpacer_8">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
            </item>
           </layout>
          </item>
@@ -3134,6 +3196,7 @@
     <addaction name="separator"/>
     <addaction name="actionExecute_Assembled"/>
     <addaction name="actionExecute_At"/>
+    <addaction name="actionStep_One_Instruction"/>
     <addaction name="separator"/>
     <addaction name="actionAssemble_and_Execute"/>
    </widget>
@@ -3259,6 +3322,14 @@
   <action name="actionAbout_Qt">
    <property name="text">
     <string>About Qt...</string>
+   </property>
+  </action>
+  <action name="actionStep_One_Instruction">
+   <property name="text">
+    <string>Step One Instruction</string>
+   </property>
+   <property name="shortcut">
+    <string>F10</string>
    </property>
   </action>
  </widget>

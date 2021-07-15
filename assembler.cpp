@@ -501,7 +501,11 @@ void Assembler::doAssembly() {
         i.address = targetOffset;
         instructions.push_back(i);
         targetOffset = (targetOffset + i.code->bytesRequired) & 0xFFFFu;
-        if(!i.label.empty()) labelTable.insert({i.label, instructions.size()-1u});
+        if(!i.label.empty()) {
+            if(labelTable.find(i.label) != labelTable.end())
+                throw SyntaxError(i.lineNumber, 0, 0, "Label repeated");
+            labelTable.insert({i.label, instructions.size()-1u});
+        }
     } while (tok.ttype != Tokenizer::END_OF_FILE);
     //Put target operand addresses for JMPs and CALLs.
     for(size_t i = 0; i < instructions.size(); i++) {
