@@ -111,9 +111,6 @@
            </item>
            <item>
             <widget class="QPushButton" name="haltButton">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
              <property name="text">
               <string>Halt</string>
              </property>
@@ -140,7 +137,7 @@
       </widget>
       <widget class="QTabWidget" name="rightWidget">
        <property name="currentIndex">
-        <number>1</number>
+        <number>0</number>
        </property>
        <widget class="QWidget" name="processorTab">
         <attribute name="title">
@@ -2850,17 +2847,25 @@
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout_6">
            <item>
-            <spacer name="horizontalSpacer_7">
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
+            <widget class="QPushButton" name="allResetButton">
+             <property name="text">
+              <string>Reset All</string>
              </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>40</width>
-               <height>20</height>
-              </size>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="ioResetButton_2">
+             <property name="text">
+              <string>Reset I/O Ports</string>
              </property>
-            </spacer>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="memResetButton_2">
+             <property name="text">
+              <string>Reset Memory</string>
+             </property>
+            </widget>
            </item>
            <item>
             <widget class="QPushButton" name="RESET_IN">
@@ -2901,8 +2906,8 @@
          </item>
          <item>
           <layout class="QGridLayout" name="gridLayout_7">
-           <item row="0" column="0">
-            <widget class="QLabel" name="label_52">
+           <item row="0" column="2">
+            <widget class="QLabel" name="label_54">
              <property name="font">
               <font>
                <weight>75</weight>
@@ -2912,7 +2917,7 @@
               </font>
              </property>
              <property name="text">
-              <string>Decimal</string>
+              <string>Binary</string>
              </property>
              <property name="alignment">
               <set>Qt::AlignCenter</set>
@@ -2934,43 +2939,6 @@
              </property>
              <property name="alignment">
               <set>Qt::AlignCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="2">
-            <widget class="QLabel" name="label_54">
-             <property name="font">
-              <font>
-               <weight>75</weight>
-               <italic>true</italic>
-               <bold>true</bold>
-               <stylestrategy>PreferAntialias</stylestrategy>
-              </font>
-             </property>
-             <property name="text">
-              <string>Binary</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="0">
-            <widget class="QLineEdit" name="decimal">
-             <property name="font">
-              <font>
-               <family>Monospace</family>
-               <stylestrategy>PreferAntialias</stylestrategy>
-              </font>
-             </property>
-             <property name="inputMask">
-              <string notr="true"/>
-             </property>
-             <property name="text">
-              <string notr="true"/>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
              </property>
             </widget>
            </item>
@@ -3009,6 +2977,50 @@
              </property>
              <property name="alignment">
               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLineEdit" name="decimal">
+             <property name="font">
+              <font>
+               <family>Monospace</family>
+               <stylestrategy>PreferAntialias</stylestrategy>
+              </font>
+             </property>
+             <property name="inputMask">
+              <string notr="true"/>
+             </property>
+             <property name="text">
+              <string notr="true"/>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="0">
+            <widget class="QLabel" name="label_52">
+             <property name="font">
+              <font>
+               <weight>75</weight>
+               <italic>true</italic>
+               <bold>true</bold>
+               <stylestrategy>PreferAntialias</stylestrategy>
+              </font>
+             </property>
+             <property name="text">
+              <string>Decimal</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="3">
+            <widget class="QPushButton" name="genRandomButton">
+             <property name="text">
+              <string>Generate Random Number</string>
              </property>
             </widget>
            </item>

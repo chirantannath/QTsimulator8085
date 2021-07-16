@@ -30,7 +30,7 @@ Processor::Processor(QObject *parent)
       io(new data8_t[IO_PORT_SIZE]){
     const std::function<void()> UNUSED = [&](){
         unused = 1u; emit unusedInstruction(memory[pc]);
-        pc++; pc &= 0xFFFFu; emit programCounterChanged();
+        //pc++; pc &= 0xFFFFu; emit programCounterChanged(); This is an error
     };
     std::memset((void *)memory, 0, sizeof(data8_t) * MEMORY_SIZE);
     std::memset((void *)io, 0, sizeof(data8_t) * IO_PORT_SIZE);
@@ -259,7 +259,7 @@ Processor::Processor(QObject *parent)
     //RIM (read interrupt masks); hex machine code 0x20.
     microprograms[RIM]      = [&](){
         a = ((sid << 7) | (rst7_5 << 6) | (rst6_5 << 5) | (rst5_5 << 4) | (ie << 3) |
-             (m7_5 << 2) | (m6_5 << 1) | m5_5) * 0xFFu;
+             (m7_5 << 2) | (m6_5 << 1) | m5_5) & 0xFFu;
         emit accumulatorChanged();
         pc++; pc &= 0xFFFFu; emit programCounterChanged();
     };
@@ -1923,7 +1923,7 @@ Processor::Processor(QObject *parent)
     };
     //RP (return on Plus); hex machine code 0xF0.
     microprograms[RP]        = [&](){
-        if(CHECK_FLAG(f, SIGN_FLAG)) {
+        if(!CHECK_FLAG(f, SIGN_FLAG)) {
             pc = PACK(memory[(sp + 1u) & 0xFFFFu] & 0xFFu, memory[sp & 0xFFFFu] & 0xFFu);
             sp+=2; sp &= 0xFFFFu; emit stackPointerChanged();
         } else pc++;
@@ -1938,7 +1938,7 @@ Processor::Processor(QObject *parent)
     };
     //JP address (jump on Plus); hex machine code 0xF2.
     microprograms[JP]       = [&](){
-        if(CHECK_FLAG(f, SIGN_FLAG))
+        if(!CHECK_FLAG(f, SIGN_FLAG))
             pc = PACK(memory[(pc + 2u) & 0xFFFFu] & 0xFFu, memory[(pc + 1u) & 0xFFFFu] & 0xFFu);
         else pc += 3;
         pc &= 0xFFFFu; emit programCounterChanged();
@@ -1950,7 +1950,7 @@ Processor::Processor(QObject *parent)
     };
     //CP address (call on Plus); hex machine code 0xF4.
     microprograms[CP]       = [&](){
-        if(CHECK_FLAG(f, SIGN_FLAG)) {
+        if(!CHECK_FLAG(f, SIGN_FLAG)) {
             pc += 3; pc &= 0xFFFFu; //Go to immediate next instruction
             sp--; sp &= 0xFFFFu; memory[sp] = (pc >> 8) & 0xFFu;
             emit memoryBlockUpdated(sp, 1u); if(sp == PACK(h, l)) emit MChanged();
@@ -1992,7 +1992,7 @@ Processor::Processor(QObject *parent)
     };
     //RM (return on Minus); hex machine code 0xF8.
     microprograms[RM]        = [&](){
-        if(!CHECK_FLAG(f, SIGN_FLAG)) {
+        if(CHECK_FLAG(f, SIGN_FLAG)) {
             pc = PACK(memory[(sp + 1u) & 0xFFFFu] & 0xFFu, memory[sp & 0xFFFFu] & 0xFFu);
             sp+=2; sp &= 0xFFFFu; emit stackPointerChanged();
         } else pc++;
@@ -2005,7 +2005,7 @@ Processor::Processor(QObject *parent)
     };
     //JM address (jump on Minus); hex machine code 0xFA.
     microprograms[JM]      = [&](){
-        if(!CHECK_FLAG(f, SIGN_FLAG))
+        if(CHECK_FLAG(f, SIGN_FLAG))
             pc = PACK(memory[(pc + 2u) & 0xFFFFu] & 0xFFu, memory[(pc + 1u) & 0xFFFFu] & 0xFFu);
         else pc += 3;
         pc &= 0xFFFFu; emit programCounterChanged();
@@ -2017,7 +2017,7 @@ Processor::Processor(QObject *parent)
     };
     //CM address (Call on Minus); hex machine code 0xFC.
     microprograms[CM]      = [&](){
-        if(!CHECK_FLAG(f, SIGN_FLAG)) {
+        if(CHECK_FLAG(f, SIGN_FLAG)) {
             pc += 3; pc &= 0xFFFFu; //Go to immediate next instruction
             sp--; sp &= 0xFFFFu; memory[sp] = (pc >> 8) & 0xFFu;
             emit memoryBlockUpdated(sp, 1u); if(sp == PACK(h, l)) emit MChanged();
@@ -2077,6 +2077,7 @@ void Processor::overwrite(const data8_t *const src, memaddr_t startLoc, memsize_
     emit MChanged();
 }
 void Processor::runFull() {
+    halt = unused = 0u;
     while(!halt && !unused && stepNextInstruction());
     halt = unused = 0u;
 }
@@ -2166,6 +2167,7 @@ void Processor::resetIOPorts() {
     emit ioPortsReset();
 }
 void Processor::RESET_IN() {
+    haltExecution(); QCoreApplication::processEvents();//halt if running
     pc = sp = 0u;
     a = b = c = d = e = h = l = 0u; f = 0u; ie = sod = inta = rst7_5 = halt = 0u;
     m5_5 = m6_5 = m7_5 = 1u; //Initial state is these external interrupts are masked.

@@ -231,7 +231,7 @@ const opcode JZ         ("JZ",      "JZ",       0xCAu,  3);
 const opcode CZ         ("CZ",      "CZ",       0xCCu,  3);
 const opcode CALL       ("CALL",    "CALL",     0xCDu,  3);
 const opcode ACI        ("ACI",     "ACI",      0xCEu,  2);
-const opcode RST_1      ("RST",     "RST_1",    0xCFu,  1);
+const opcode RST_1      ("RST",     "RST 1",    0xCFu,  1);
 const opcode RNC        ("RNC",     "RNC",      0xD0u,  1);
 const opcode POP_D      ("POP",     "POP D",    0xD1u,  1);
 const opcode JNC        ("JNC",     "JNC",      0xD2u,  3);
@@ -247,7 +247,7 @@ const opcode IN         ("IN",      "IN",       0xDBu,  2);
 const opcode CC         ("CC",      "CC",       0xDCu,  3);
 //Unused instruction                            0xDD.
 const opcode SBI        ("SBI",     "SBI",      0xDEu,  2);
-const opcode RST_3      ("RST",     "RST_3",    0xDFu,  1);
+const opcode RST_3      ("RST",     "RST 3",    0xDFu,  1);
 const opcode RPO        ("RPO",     "RPO",      0xE0u,  1);
 const opcode POP_H      ("POP",     "POP H",    0xE1u,  1);
 const opcode JPO        ("JPO",     "JPO",      0xE2u,  3);

@@ -14,13 +14,15 @@
 #include <QIODevice>
 #include <QTextStream>
 #include <QModelIndex>
+#include <QMessageBox>
 #include <vector>
+#include <chrono>
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
-    , ui(new Ui::MainWindow), emptyDebugTableModel(new DebugTableModel(this)), isFileModified(false)
+    , ui(new Ui::MainWindow), emptyDebugTableModel(new DebugTableModel(this)), isFileModified(0)
 {
     ui->setupUi(this);
     const int largeLimit = QGuiApplication::primaryScreen()->size().width();
@@ -75,6 +77,12 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->memResetButton, &QPushButton::clicked, processor, &Processor::resetMemory);
     connect(ui->memResetButton, &QPushButton::clicked, this, &MainWindow::clearDebugTable);
     connect(ui->ioResetButton, &QPushButton::clicked, processor, &Processor::resetIOPorts);
+    connect(ui->memResetButton_2, &QPushButton::clicked, ui->memResetButton, &QPushButton::clicked);
+    connect(ui->ioResetButton_2, &QPushButton::clicked, ui->ioResetButton, &QPushButton::clicked);
+    connect(ui->allResetButton, &QPushButton::clicked, ui->RESET_IN, &QPushButton::clicked);
+    connect(ui->allResetButton, &QPushButton::clicked, ui->memResetButton, &QPushButton::clicked);
+    connect(ui->allResetButton, &QPushButton::clicked, ui->ioResetButton, &QPushButton::clicked);
+    connect(ui->genRandomButton, &QPushButton::clicked, this, &MainWindow::genRandom);
     connect(ui->source, &Editor::modificationChanged, this, &MainWindow::fileModified);
 
     connect(ui->actionNew_Source_File, &QAction::triggered, this, &MainWindow::newFile);
@@ -90,11 +98,29 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(ui->actionAssemble, &QAction::triggered, ui->assembleButton, &QPushButton::clicked);
 
+    connect(ui->actionAbout, &QAction::triggered, this,
+            [&](){QMessageBox::about(this, tr("About QTSimulator8085"), tr("An 8085 simulator developed using C++/Qt."));});
     connect(ui->actionAbout_Qt, &QAction::triggered, &QApplication::aboutQt);
 
     connect(ui->actionStep_One_Instruction, &QAction::triggered, ui->stepButton, &QPushButton::clicked);
+    connect(ui->actionExecute_Assembled, &QAction::triggered, ui->oneShot, &QPushButton::clicked);
+    connect(ui->actionExecute_At, &QAction::triggered, this, [&](){
+        ui->leftWidget->setCurrentWidget(ui->debugTab);
+        ui->runTarget->setFocus(Qt::OtherFocusReason);
+    });
+    connect(ui->actionAssemble_and_Execute, &QAction::triggered, this, [&]() {
+        assemble();
+        if(lastAssemblyErrored) return;
+        ui->leftWidget->setCurrentWidget(ui->debugTab);
+        ui->runTarget->setFocus(Qt::OtherFocusReason);
+    });
     connect(ui->stepButton, &QPushButton::clicked, processor, &Processor::stepNextInstruction);
     connect(ui->oneShot, &QPushButton::clicked, processor, &Processor::runFull);
+    connect(ui->oneShot, &QPushButton::clicked, this, [&](){ui->statusbar->showMessage(tr("Processor running..."));});
+    connect(ui->haltButton, &QPushButton::clicked, processor, &Processor::haltExecution);
+    connect(processor, &Processor::halted, this, [&](){ui->statusbar->showMessage(tr("Processor execution halted"));});
+    connect(processor, &Processor::unusedInstruction, this,
+            [&](data8_t value){ui->statusbar->showMessage(tr("Unused instruction ") + QString::number(value, 16) + tr(" encountered"));});
 
     connect(ui->findTarget, &QLineEdit::editingFinished, this, [&](){
         unsigned target = ui->findTarget->text().toUInt(nullptr, 16);
@@ -135,6 +161,13 @@ MainWindow::MainWindow(QWidget *parent)
     connect(processor, &Processor::interruptEnableStatusChanged, this, &MainWindow::interruptEnableStatusChanged);
     connect(processor, &Processor::interruptAcknowledgeStatusChanged, this, &MainWindow::interruptAcknowledgeStatusChanged);
 
+    //Seed RNG
+    std::random_device dev; //Locate a hardware true randomness source if available
+    using random_t = std::random_device::result_type;
+    std::chrono::duration<long double> time = std::chrono::system_clock::now().time_since_epoch();
+    std::seed_seq seeder{(random_t)dev(), (random_t)std::chrono::duration_cast<std::chrono::milliseconds>(time).count()};
+    random_t final_seed; seeder.generate(&final_seed, (&final_seed)+1); rng = std::default_random_engine(final_seed);
+
     //fire events to initialize
     ui->sid->setChecked(processor->serialInputDataLatch());
     ui->trap->setChecked(processor->isTRAPRequested());
@@ -162,7 +195,7 @@ MainWindow::MainWindow(QWidget *parent)
     interruptEnableStatusChanged();
     interruptAcknowledgeStatusChanged();
 
-    newFile();
+    ui->leftWidget->setCurrentIndex(0); ui->rightWidget->setCurrentIndex(0); newFile();
 }
 
 MainWindow::~MainWindow()
@@ -183,6 +216,7 @@ void MainWindow::closeEvent(QCloseEvent *evt) {
 #include <vector>
 #include <sstream>
 void MainWindow::assemble() {
+    lastAssemblyErrored = 0;
     ui->statusbar->showMessage(tr("Assembling..."));
     processor->resetAll();
     assembler->in = new std::stringstream(ui->source->toPlainText().toStdString());
@@ -205,6 +239,7 @@ void MainWindow::assemblyFinished() {
     ui->leftWidget->setCurrentWidget(ui->debugTab); //go to debug page if possible
     ui->rightWidget->setCurrentWidget(ui->memoryTab);
     ui->statusbar->showMessage(tr("OK."));
+    lastAssemblyErrored = 0;
 }
 void MainWindow::clearDebugTable() {
     if(currentDebugTableModel != emptyDebugTableModel) {
@@ -220,6 +255,7 @@ void MainWindow::runTargetUpdated() {
 #include <QTextCursor>
 #include <QTextBlock>
 void MainWindow::assemblyError(SyntaxError ex) {
+    lastAssemblyErrored = 1;
     delete assembler->in;
     ui->sourceTab->setDisabled(false);
     ui->debugTab->setDisabled(false);
@@ -272,8 +308,14 @@ void MainWindow::binaryEdited(const QString &text) {
     ui->hexadecimal->setText(QString::number(value, 16).toUpper());
     ui->decimal->setText(QString::number(value, 10));
 }
+void MainWindow::genRandom() {
+    unsigned long long value = std::uniform_int_distribution<unsigned long long>(0, 0xFFFF)(rng);
+    ui->hexadecimal->setText(QString::number(value, 16).toUpper());
+    ui->binary->setText(QString::number(value, 2));
+    ui->decimal->setText(QString::number(value, 10));
+}
 void MainWindow::fileModified(bool modified) {
-    isFileModified = modified;
+    isFileModified = modified ? 1 : 0;
     if(modified && !windowTitle().startsWith(QString("*"))) {setWindowTitle(QString("*") + windowTitle());}
     else if(!modified && windowTitle().startsWith(QString("*"))) {setWindowTitle(windowTitle().right(windowTitle().length() - 1));}
 }
@@ -299,10 +341,18 @@ void MainWindow::newFile() {
 }
 void MainWindow::openFile() {
     if(!checkUnsaved()) return;
+openFileRetry:
     QString name = QFileDialog::getOpenFileName(this, tr("Open Source File"), QString(),
                                                 tr("8085 Assembly Source Files (*.asm);;All Files (*.*)"));
     if(name.isNull()) return; //operation canncelled.
-    currentlyOpenedFile = QFileInfo(name);
+    QFileInfo current(name);
+    if(!current.isReadable()) {
+        QMessageBox::critical(this, tr("Error!"),
+                              tr("The selected file ")+current.absoluteFilePath()+tr(" is not readable."),
+                              QMessageBox::Ok, QMessageBox::Ok);
+        goto openFileRetry;
+    }
+    currentlyOpenedFile = current;
     QFile file(currentlyOpenedFile.absoluteFilePath());
     file.open(QIODevice::ReadOnly | QIODevice::Text);
     ui->source->setPlainText(QTextStream(&file).readAll()); ui->source->document()->setModified(false); fileModified(false);
@@ -311,6 +361,12 @@ void MainWindow::openFile() {
 }
 void MainWindow::saveFile() {
     if(!currentlyOpenedFile.isFile()) {saveFileAs(); return;}
+    if(!currentlyOpenedFile.isWritable()) {
+        QMessageBox::critical(this, tr("Error!"),
+                              tr("The file ")+currentlyOpenedFile.absoluteFilePath()+tr(" is not writable."),
+                              QMessageBox::Ok, QMessageBox::Ok);
+        saveFileAs(); return;
+    }
     QFile file(currentlyOpenedFile.absoluteFilePath());
     file.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate);
     QTextStream(&file)<<ui->source->toPlainText();
@@ -320,10 +376,18 @@ void MainWindow::saveFile() {
 }
 void MainWindow::saveFileAs() {
     if(currentlyOpenedFile.isFile() && !checkUnsaved()) return; //cancelled
+saveFileAsRetry:
     QString name = QFileDialog::getSaveFileName(this, tr("Save Source File"), QString(),
                                                 tr("8085 Assembly Source Files (*.asm);;All Files (*.*)"));
     if(name.isNull()) return; //operation cancelled.
-    currentlyOpenedFile = QFileInfo(name);
+    QFileInfo current(name);
+    if(!current.isWritable()) {
+        QMessageBox::critical(this, tr("Error!"),
+                              tr("The selected file ")+current.absoluteFilePath()+tr(" is not writable."),
+                              QMessageBox::Ok, QMessageBox::Ok);
+        goto saveFileAsRetry;
+    }
+    currentlyOpenedFile = current;
     QFile file(currentlyOpenedFile.absoluteFilePath());
     file.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate);
     QTextStream(&file)<<ui->source->toPlainText();

@@ -36,7 +36,7 @@ class Processor : public QObject
 {
     Q_OBJECT
     /*These are property definitions; required for interoperability with Qt. Consider "The Property System" in Qt
-      Documentation.*/
+      Documentation. For now they are not required so they are removed.
     ///Accumulator register
     Q_PROPERTY(data8_t accumulator MEMBER a READ getAccumulator NOTIFY accumulatorChanged)
     ///Register B
@@ -92,7 +92,7 @@ class Processor : public QObject
     ///Serial output data latch
     Q_PROPERTY(bool SOD READ serialOutputDataLatch NOTIFY serialOutput)
     ///Serial input data latch
-    Q_PROPERTY(bool SID READ serialInputDataLatch WRITE setSerialInputLatch)
+    Q_PROPERTY(bool SID READ serialInputDataLatch WRITE setSerialInputLatch)*/
 
     ///Code to be executed for each opcode (first byte; all 256 combinations). Consider this to be the micro-program
     ///memory for the 8085, if it was modelled in a microprogrammed approach.

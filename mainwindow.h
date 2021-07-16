@@ -4,6 +4,7 @@
 #include <QMainWindow>
 #include <QString>
 #include <QCloseEvent>
+#include <random>
 #include "commdefs.h"
 #include "opcodes.h"
 #include "processor.h"
@@ -68,6 +69,8 @@ private slots:
     void hexadecimalEdited(const QString& text);
 
     void binaryEdited(const QString& text);
+
+    void genRandom();
 
     void fileModified(bool modified);
 
@@ -140,7 +143,9 @@ private:
     Assembler *assembler;
     SyntaxHighlighter *highlighter;
     QFileInfo currentlyOpenedFile;
-    bool isFileModified;
+    unsigned isFileModified : 1;
+    unsigned lastAssemblyErrored : 1;
+    std::default_random_engine rng;
 
     bool checkUnsaved(); //if false; entire operation is cancelled.
 };
