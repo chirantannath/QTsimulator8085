@@ -381,17 +381,16 @@ saveFileAsRetry:
                                                 tr("8085 Assembly Source Files (*.asm);;All Files (*.*)"));
     if(name.isNull()) return; //operation cancelled.
     QFileInfo current(name);
-    if(!current.isWritable()) {
+    QFile file(current.absoluteFilePath());
+    if(!file.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate)) {
         QMessageBox::critical(this, tr("Error!"),
                               tr("The selected file ")+current.absoluteFilePath()+tr(" is not writable."),
                               QMessageBox::Ok, QMessageBox::Ok);
         goto saveFileAsRetry;
     }
-    currentlyOpenedFile = current;
-    QFile file(currentlyOpenedFile.absoluteFilePath());
-    file.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate);
     QTextStream(&file)<<ui->source->toPlainText();
     file.close();
+    currentlyOpenedFile = current;
     setWindowTitle(currentlyOpenedFile.fileName() + tr(": QTSimulator8085"));
     ui->source->document()->setModified(false); fileModified(false);
 }
