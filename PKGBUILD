@@ -3,9 +3,9 @@
 
 pkgname=qtsimulator8085-git
 gitdir=QTsimulator8085
-pkgver=.24.8116ff8
-pkgrel=1
-pkgdesc="An 8085 simulator developed using C++/Qt"
+pkgver=0.0.2alpha
+pkgrel=2
+pkgdesc="An 8085 simulator developed using C++11/Qt5"
 arch=('x86_64' 'i686')
 url="https://github.com/chirantannath/QTsimulator8085"
 license=('MIT') 

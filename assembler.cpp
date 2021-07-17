@@ -38,6 +38,7 @@ Tokenizer::TokenType Tokenizer::getNextToken() {
     if(!isGood()) return ttype = STREAM_ERROR;
     //check for non-newline whitespace
     if(std::isspace(ch = peekNextChar()) && ch != '\n') {
+        //while stream is good and the next character is space and not newline...
         while(isGood() && std::isspace(ch = getNextChar()) && ch != '\n') token.append(1, ch);
         if(isGood()) putBackChar(ch); //put back the character which did not follow rule
         columnNumber += token.length();
@@ -59,6 +60,7 @@ Tokenizer::TokenType Tokenizer::getNextToken() {
     }
     //alphanumeric characters checked here
     if(std::isalnum(ch = peekNextChar())) {
+        //while stream is good and next character is alphanumeric...
         while(isGood() && std::isalnum(ch = getNextChar())) token.append(1, ch);
         if(isGood()) putBackChar(ch); //put back the character which did not follow rule
         columnNumber+=token.length();
@@ -71,6 +73,7 @@ Tokenizer::TokenType Tokenizer::getNextToken() {
     }
     //Comments
     if((ch = peekNextChar()) == ';') {
+        //while stream is good and we do not encounter a newline...
         while(isGood() && (ch = getNextChar()) != '\n') token.append(1, ch);
         if(isGood()) putBackChar(ch); //put back the character which did not follow rule
         columnNumber+=token.length();
@@ -256,11 +259,7 @@ LineTranslator::LineTranslator(Tokenizer &tok)  : tok(tok) {
 
     mnemonicProcessors.insert({"INX", [&](Instruction &i, const char *name) {registerPairProc(i, name); i.code = opcodesByCode[0x03u | (i.operand << 4)]; i.operand = 0;}});
     mnemonicProcessors.insert({"DCX", [&](Instruction &i, const char *name) {registerPairProc(i, name); i.code = opcodesByCode[0x0Bu | (i.operand << 4)]; i.operand = 0;}});
-    mnemonicProcessors.insert({"DAD", [&](Instruction &i, const char *name) {
-                                   //std::printf("Here in DAD\n"); std::fflush(stdout);
-                                   registerPairProc(i, name);
-                                   i.code = opcodesByCode[0x09u | (i.operand << 4)];
-                                   i.operand = 0;}});
+    mnemonicProcessors.insert({"DAD", [&](Instruction &i, const char *name) {registerPairProc(i, name); i.code = opcodesByCode[0x09u | (i.operand << 4)]; i.operand = 0;}});
 
     mnemonicProcessors.insert({"LXI", [&](Instruction &i, const char *) { //Call for LXI that takes a single register pair (BC, DE, HL or SP) and a word integer as arguments.
         static CaseInsensitive comparator;
@@ -332,6 +331,10 @@ LineTranslator::LineTranslator(Tokenizer &tok)  : tok(tok) {
         i.code = opcodesByCode[0xC7u | (n << 3)];
     }});
 
+    //Format of ORG is this:
+    // # ORG <16-bit address number>
+    //Indicates the following instruction lines will be put starting from the given address. Note that the Assembler class does
+    //NOT do any overlap checking (if relocation of such instructions overwrites any previous instruction written)
     pseudocodeProcessors.insert({"ORG", [&](Instruction &i, const char *) {//For #ORG pseudocode.
         i.code = &ORG;
         ignoreWhitespaces();
