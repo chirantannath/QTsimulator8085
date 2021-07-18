@@ -127,12 +127,16 @@ private slots:
     void interruptEnableStatusChanged();
     ///Fired when the INTA interrupt acknowledge value changes (either acknowedged or reset).
     void interruptAcknowledgeStatusChanged();
-
+    ///Fired when processor halts its instruction execution (either externally or due to HLT).
+    void halted();
+    ///Start processor to run program
+    void runOneShot();
 signals:
     //WARNING: TREAT THE FOLLOWING AS PRIVATE API
     ///Fire event to signal assembler to begin assembling.
     void __fireAssemblerEvent();
-
+    ///Fire event to signal processor to begin running.
+    void __fireOneShot();
 private:
     ///UI management object
     Ui::MainWindow *ui;

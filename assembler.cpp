@@ -501,6 +501,7 @@ void Assembler::doAssembly() {
     Tokenizer tok(*in); LineTranslator translator(tok);
     memaddr_t targetOffset = 0; //where to put the next address. We start at 0 unless specified otherwise.
     std::map<std::string, size_t, StringInsensitive> labelTable; //table for labels to instructions (index references stored)
+    std::unordered_map<unsigned, size_t>::iterator overlap; //Overlap reference if occured.
     std::unordered_map<unsigned, size_t> addressTable; //Table for addresses assigned to each instruction. Used for checking address overlap.
     instructions.clear();
     //Put addresses to instructions
@@ -509,9 +510,16 @@ void Assembler::doAssembly() {
         Instruction i = translator.translateOneLine();
         if(i.code == nullptr) continue;
         else if(i.code->isPseudocode) {
-            pseudocodeProcessors[i.code](i, targetOffset); continue;}
-        std::unordered_map<unsigned, size_t>::iterator overlap = addressTable.find(targetOffset);
-        if(overlap != addressTable.end()) throw SyntaxError(i.lineNumber, 0, 0, "Address overlap with instruction at line " + unsignedNumber(instructions[overlap->second].lineNumber));
+            if(i.code == &DATA) {
+                overlap = addressTable.find(i.operand);
+                if(overlap != addressTable.end())
+                    throw SyntaxError(i.lineNumber, 0, 0, "Address overlap with instruction at line " + unsignedNumber(instructions[overlap->second].lineNumber));
+            }
+            pseudocodeProcessors[i.code](i, targetOffset); continue;
+        }
+        overlap = addressTable.find(targetOffset);
+        if(overlap != addressTable.end())
+            throw SyntaxError(i.lineNumber, 0, 0, "Address overlap with instruction at line " + unsignedNumber(instructions[overlap->second].lineNumber));
         i.address = targetOffset;
         instructions.push_back(i); addressTable[i.address] = instructions.size()-1u;
         targetOffset = (targetOffset + i.code->bytesRequired) & 0xFFFFu;

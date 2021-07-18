@@ -2085,7 +2085,8 @@ void Processor::runFull() {
 bool Processor::stepNextInstruction() {
     microprograms[memory[pc & 0xFFFFu] & 0xFFu]();
     //Check HALT
-    if(halt) {emit halted(); emit stepped(); return false;}
+    if(halt) {
+        emit halted(); emit stepped(); return false;}
     //Check TRAP
     if(trap_lowToHigh) {
         trap_lowToHigh = 0; //Disable next TRAP. Now we need a function call to 0024H.

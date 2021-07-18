@@ -115,10 +115,10 @@ MainWindow::MainWindow(QWidget *parent)
         ui->runTarget->setFocus(Qt::OtherFocusReason);
     });
     connect(ui->stepButton, &QPushButton::clicked, processor, &Processor::stepNextInstruction);
-    connect(ui->oneShot, &QPushButton::clicked, processor, &Processor::runFull);
-    connect(ui->oneShot, &QPushButton::clicked, this, [&](){ui->statusbar->showMessage(tr("Processor running..."));});
+    connect(ui->oneShot, &QPushButton::clicked, this, &MainWindow::runOneShot);
+    connect(this, &MainWindow::__fireOneShot, processor, &Processor::runFull);
     connect(ui->haltButton, &QPushButton::clicked, processor, &Processor::haltExecution);
-    connect(processor, &Processor::halted, this, [&](){ui->statusbar->showMessage(tr("Processor execution halted"));});
+    connect(processor, &Processor::halted, this, &MainWindow::halted);
     connect(processor, &Processor::unusedInstruction, this,
             [&](data8_t value){ui->statusbar->showMessage(tr("Unused instruction ") + QString::number(value, 16) + tr(" encountered"));});
 
@@ -209,6 +209,14 @@ void MainWindow::closeEvent(QCloseEvent *evt) {
 }
 
 //private slots
+
+void MainWindow::runOneShot() {
+    ui->statusbar->showMessage(tr("Processor running..."));
+    emit __fireOneShot();
+}
+void MainWindow::halted() {
+    ui->statusbar->showMessage(tr("Processor execution halted"));
+}
 
 #include <vector>
 #include <sstream>
