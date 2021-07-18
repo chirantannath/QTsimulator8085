@@ -23,7 +23,7 @@ furnished to do so, subject to the following conditions:
 
 //Processor
 
-Processor::Processor(QObject *parent)
+Processor::Processor(QObject *parent) //The content of this constructor is LARGE. Take your time to go through it.
     : QObject(parent),
       microprograms(new std::function<void()>[256]),
       memory(new data8_t[MEMORY_SIZE]),
@@ -40,7 +40,8 @@ Processor::Processor(QObject *parent)
     ie = intr = inta = trap = rst7_5 = rst6_5 = rst5_5 = sod = sid = halt = unused = trap_lowToHigh = 0u;
     m5_5 = m6_5 = m7_5 = 1u; //Initial state is these external interrupts are masked.
 
-    //Insert instruction codes here
+    //Microprograms (or, what to do on each opcode) is coded here.
+
     //NOP (no operation); hex machine code 0x00.
     microprograms[NOP]      = [&](){pc++; pc &= 0xFFFFu; emit programCounterChanged();};
     //LXI B, word (load register pair immediate BC); hex machine code 0x01.
@@ -2068,7 +2069,6 @@ void Processor::overwrite(const data8_t *const src, memaddr_t startLoc, memsize_
     memaddr_t destAddr; memsize_t srcLoc;
     memsize_t minAddr = startLoc, maxAddr = startLoc;
     for(destAddr = startLoc, srcLoc = 0; srcLoc < length; destAddr++, destAddr &= 0xFFFFu, srcLoc++) {
-        //IDENTITY ERRORS HERE?
         memory[destAddr] = src[srcLoc] & 0xFFu;
         if(minAddr > destAddr) minAddr = destAddr;
         if(maxAddr < destAddr) maxAddr = destAddr;
@@ -2081,7 +2081,6 @@ void Processor::runFull() {
     while(!halt && !unused && stepNextInstruction());
     halt = unused = 0u;
 }
-#include <QThread>
 #include <QCoreApplication>
 bool Processor::stepNextInstruction() {
     microprograms[memory[pc & 0xFFFFu] & 0xFFu]();

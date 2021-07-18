@@ -28,7 +28,7 @@ furnished to do so, subject to the following conditions:
 
 DebugTableModel::DebugTableModel(QObject *parent, const std::vector<Instruction> &vec)
     : QAbstractTableModel(parent), list(vec) {
-    std::stable_sort(list.begin(), list.end(), InstructionAddressComparator());
+    std::stable_sort(list.begin(), list.end(), InstructionAddressComparator()); //We show rows sorted on instruction address.
 }
 int DebugTableModel::rowCount(const QModelIndex &parent) const {return parent.isValid() ? 0 : list.size();} //override
 int DebugTableModel::columnCount(const QModelIndex &parent) const {return parent.isValid() ? 0 : 7;} //override
@@ -53,13 +53,9 @@ QVariant DebugTableModel::data(const QModelIndex &index, int role) const {//over
         case 6: return QVariant(list[index.row()].code->bytesRequired == 3 ? getHex8((list[index.row()].operand >> 8) & 0xFFu) : QString(""));
         default: return QVariant();
         }
-
     case Qt::FontRole: return QVariant(QFont("Monospace"));
-
     case Qt::TextAlignmentRole: return QVariant(Qt::AlignCenter);
-
     case Qt::BackgroundRole: return index.row() == highlightedIndex ? QVariant(constructHighlightBrush()) : QVariant();
-
     default: return QVariant();
     }
 }
@@ -76,11 +72,11 @@ void DebugTableModel::setHighlightedIndex(int index) {
         int old = highlightedIndex;
         QVector<int> roles(columnCount(), Qt::BackgroundRole);
         highlightedIndex = index;
-        if(old != -1) {
+        if(old != -1) {//background change
             emit dataChanged(createIndex(old, 0), createIndex(old, roles.length()-1), roles);
             emit headerDataChanged(Qt::Vertical, old, old);
         }
-        if(index != -1) {
+        if(index != -1) {//background change
             emit dataChanged(createIndex(index, 0), createIndex(index, roles.length()-1), roles);
             emit headerDataChanged(Qt::Vertical, index, index);
         }

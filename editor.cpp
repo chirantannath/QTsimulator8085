@@ -28,9 +28,11 @@ furnished to do so, subject to the following conditions:
 #include <QString>
 #include "editor.h"
 
-//Editor
+//For clues, the following code was adapted from:
+//https://doc.qt.io/qt-5/qtwidgets-widgets-codeeditor-example.html
+//The difference lies in the names of classes used, some extra features, and that we used QPlainTextEdit instead of QRichTextEdit.
 
-Editor::Editor(QWidget *parent) : QPlainTextEdit(parent) /*, errorLine(-1)*/ {
+Editor::Editor(QWidget *parent) : QPlainTextEdit(parent) {
     lineNumberArea = new LineNumberArea(this);
     connect(this, &Editor::blockCountChanged, this, &Editor::updateLineNumberAreaWidth);
     connect(this, &Editor::updateRequest, this, &Editor::updateLineNumberArea);

@@ -26,11 +26,11 @@ furnished to do so, subject to the following conditions:
 #include "memorymodel.h"
 
 //MemoryTableModel
-const QColor MemoryTableModel::pc = QColor::fromRgbF(0.75, 0.25, 0.25, 0.25); //red
-const QColor MemoryTableModel::bc = QColor::fromRgbF(0.25, 0.75, 0.25, 0.25); //green
-const QColor MemoryTableModel::de = QColor::fromRgbF(0.75, 0.75, 0.25, 0.25); //yellow
-const QColor MemoryTableModel::hl = QColor::fromRgbF(0.50, 0.50, 0.50, 0.25); //grey-ish
-const QColor MemoryTableModel::sp = QColor::fromRgbF(0.25, 0.25, 0.75, 0.25); //blue
+const QColor MemoryTableModel::pc = QColor::fromRgbF(0.75, 0.25, 0.25, 0.5); //red
+const QColor MemoryTableModel::bc = QColor::fromRgbF(0.25, 0.75, 0.25, 0.5); //green
+const QColor MemoryTableModel::de = QColor::fromRgbF(0.75, 0.75, 0.25, 0.5); //yellow
+const QColor MemoryTableModel::hl = QColor::fromRgbF(0.50, 0.50, 0.50, 0.5); //grey-ish
+const QColor MemoryTableModel::sp = QColor::fromRgbF(0.25, 0.25, 0.75, 0.5); //blue
 
 MemoryTableModel::MemoryTableModel(Processor *proc, QObject *parent) : QAbstractTableModel(parent), processor(proc) {
     connect(processor, &Processor::memoryBlockUpdated, this, &MemoryTableModel::memoryBlockUpdated);
@@ -57,16 +57,13 @@ QVariant MemoryTableModel::data(const QModelIndex &index, int role) const {//ove
     switch(role) {
     case Qt::EditRole:
     case Qt::DisplayRole: return QVariant(getHex8(processor->getMemoryByte(address)));
-
     case Qt::WhatsThisRole:
     case Qt::AccessibleDescriptionRole:
     case Qt::ToolTipRole: return QVariant(tr("Memory at address ") + getHex16(address) + tr("H"));
-
     case Qt::FontRole: return QVariant(QFont("Monospace"));
-
     case Qt::TextAlignmentRole: return QVariant(Qt::AlignCenter);
-
     case Qt::BackgroundRole:
+        //Take note of priority order (highest to lowest). Developer may reorder it if wanted
         if(address == processor->getProgramCounter()) brush.setColor(pc);
         else if(address == processor->getHLRegisterPair()) brush.setColor(hl);
         else if(address == processor->getStackPointer()) brush.setColor(sp);
@@ -74,7 +71,6 @@ QVariant MemoryTableModel::data(const QModelIndex &index, int role) const {//ove
         else if(address == processor->getDERegisterPair()) brush.setColor(de);
         else return QVariant(); //default if none match
         return QVariant(brush);
-
     default: return QVariant(); //use default for rest
     }
 }
@@ -157,11 +153,8 @@ void MemoryTableModel::memoryBlockUpdated(memaddr_t startLoc, memsize_t blockSiz
     QVector<int> roles(blockSize, Qt::DisplayRole);
     switch(blockSize) {
     case 0u: break;
-
     case 0xFFFFu + 1u: emit dataChanged(createIndex(0, 0), createIndex(0xFFF, 15), roles); break;
-
-    case 1u: emit dataChanged(createIndex((startLoc >> 4) & 0xFFFu, startLoc & 0xFu),
-                              createIndex((startLoc >> 4) & 0xFFFu, startLoc & 0xFu), roles); break;
+    case 1u: emit dataChanged(createIndex((startLoc >> 4) & 0xFFFu, startLoc & 0xFu), createIndex((startLoc >> 4) & 0xFFFu, startLoc & 0xFu), roles); break;
     default: {
         memaddr_t min, max;
         for(memsize_t i = 0; i < blockSize; i++) {
@@ -176,6 +169,7 @@ void MemoryTableModel::memoryBlockUpdated(memaddr_t startLoc, memsize_t blockSiz
         max = (max >> 4) & 0xFFFu;
         roles = QVector<int>((max - min + 1) * 16, Qt::DisplayRole);
         emit dataChanged(createIndex(min, 0), createIndex(max, 15), roles);
+        break;
     }
     }
 }

@@ -24,23 +24,26 @@ furnished to do so, subject to the following conditions:
 
 #include <QSyntaxHighlighter>
 #include <QTextDocument>
-#include <QColor>
-#include <QFont>
 #include <QTextCharFormat>
 #include <QObject>
 #include <QString>
 #include <unordered_map>
 #include "assembler.h"
 
+///Provides syntax highlighting.
 class SyntaxHighlighter : public QSyntaxHighlighter
 {
     Q_OBJECT
-
+    ///Formats to be used for each token type.
     std::unordered_map<Tokenizer::TokenType, QTextCharFormat> highlightingRules;
 public:
+    ///Constructor
     SyntaxHighlighter(QTextDocument *parent = nullptr);
+    ///Destructor required for interop with Qt.
+    virtual ~SyntaxHighlighter() = default;
 protected:
-    void highlightBlock(const QString &);
+    ///Highlight a block of text. Called from the Qt system.
+    void highlightBlock(const QString &); //override
 };
 
 #endif // SYNTAXHIGHLIGHTER_H

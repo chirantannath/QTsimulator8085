@@ -578,6 +578,7 @@ extern const opcode *getOpcode(const char * const name);
 ///Map opcodes by bytecode.
 extern const opcode *opcodesByCode[256];
 
+///Call this in main() so that Qt knows about these types.
 #define OPCODES_H_registerHeaderMetaTypes() {\
     qRegisterMetaType<__opcode>("opcode"); \
     qRegisterMetaType<opcode>("opcode"); \

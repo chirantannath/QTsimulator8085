@@ -366,7 +366,6 @@ bool isPseudocode(const char * const name) {
     if(pseudoSet.empty()) {pseudoSet.insert("ORG"); pseudoSet.insert("DATA");}
     return pseudoSet.find(name) != pseudoSet.end();
 }
-
 const opcode *getPseudocode(const char * const name) {
     static std::map<const char *, const opcode *, CaseInsensitive> pseudoMap;
     if(pseudoMap.empty()) {pseudoMap.insert({"ORG", &ORG}); pseudoMap.insert({"DATA", &DATA});}

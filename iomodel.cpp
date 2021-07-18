@@ -41,28 +41,24 @@ QVariant IOTableModel::data(const QModelIndex &index, int role) const {//overrid
     switch(role) {
     case Qt::EditRole:
     case Qt::DisplayRole: return QVariant(getHex8(processor->getOutputByte(address)));
-
     case Qt::WhatsThisRole:
     case Qt::AccessibleDescriptionRole:
     case Qt::ToolTipRole: return QVariant(tr("Value at I/O port address ") + getHex8(address) + tr("H"));
-
     case Qt::FontRole: return QVariant(QFont("Monospace"));
-
     case Qt::TextAlignmentRole: return QVariant(Qt::AlignCenter);
-
     default: return QVariant(); //use default for rest
     }
 }
 int IOTableModel::rowCount(const QModelIndex &parent) const {return parent.isValid() ? 0 : 16;}//override
 int IOTableModel::columnCount(const QModelIndex &parent) const {return parent.isValid() ? 0 : 16;}//override
 QVariant IOTableModel::headerData(int section, Qt::Orientation orientation, int role) const {//override
-    QChar character[] = {QChar(HEX_DIGITS[section])};
+    QChar character[] = {QChar(DIGITS[section])};
     QString str(character, 1);
     switch(role) {
     case Qt::DisplayRole:
         switch(orientation) {
         case Qt::Horizontal: return QVariant(str);
-        case Qt::Vertical: return QVariant(str + tr("0"));
+        case Qt::Vertical: return QVariant(str + QLatin1String("0"));
         default: return QVariant();
         }
     default: return QVariant();

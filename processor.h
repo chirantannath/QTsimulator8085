@@ -35,65 +35,6 @@ furnished to do so, subject to the following conditions:
 class Processor : public QObject
 {
     Q_OBJECT
-    /*These are property definitions; required for interoperability with Qt. Consider "The Property System" in Qt
-      Documentation. For now they are not required so they are removed.
-    ///Accumulator register
-    Q_PROPERTY(data8_t accumulator MEMBER a READ getAccumulator NOTIFY accumulatorChanged)
-    ///Register B
-    Q_PROPERTY(data8_t bRegister MEMBER b READ getBRegister NOTIFY registerBChanged)
-    ///Register C
-    Q_PROPERTY(data8_t cRegister MEMBER c READ getCRegister NOTIFY registerCChanged)
-    ///Register D
-    Q_PROPERTY(data8_t dRegister MEMBER d READ getDRegister NOTIFY registerDChanged)
-    ///Register E
-    Q_PROPERTY(data8_t eRegister MEMBER e READ getERegister NOTIFY registerEChanged)
-    ///Flags (register F)
-    Q_PROPERTY(flags_t flags MEMBER f READ getFlags NOTIFY flagsChanged)
-    ///Register H
-    Q_PROPERTY(data8_t hRegister MEMBER h READ getHRegister NOTIFY registerHChanged)
-    ///Register L
-    Q_PROPERTY(data8_t lRegister MEMBER l READ getLRegister NOTIFY registerLChanged)
-    ///Pseudo register M
-    Q_PROPERTY(data8_t M READ getM NOTIFY MChanged)
-    ///Program status word (register pair AF)
-    Q_PROPERTY(data16_t programStatusWord READ getProgramStatusWord STORED false)
-    ///Register pair BC
-    Q_PROPERTY(data16_t bcRegisterPair READ getBCRegisterPair STORED false)
-    ///Register pair DE
-    Q_PROPERTY(data16_t deRegisterPair READ getDERegisterPair STORED false)
-    ///Register pair HL
-    Q_PROPERTY(data16_t hlRegisterPair READ getHLRegisterPair STORED false)
-    ///Program counter register
-    Q_PROPERTY(memaddr_t programCounter MEMBER pc READ getProgramCounter NOTIFY programCounterChanged)
-    ///Stack pointer register
-    Q_PROPERTY(memaddr_t stackPointer MEMBER sp READ getStackPointer NOTIFY stackPointerChanged)
-    ///Interrupt enable latch
-    Q_PROPERTY(bool IE READ isInterruptEnabled NOTIFY interruptEnableStatusChanged)
-    ///Interrupt request flag/latch
-    Q_PROPERTY(bool INTR READ isInterruptRequested WRITE setInterruptRequest)
-    ///Interrupt acknowledge flag/latch
-    Q_PROPERTY(bool INTA READ isInterruptAcknowledged NOTIFY interruptAcknowledgeStatusChanged)
-    ///Interrupt Service Routine vector instruction to execute on INTR (is always one of the RST instructions)
-    Q_PROPERTY(data8_t INTRVector READ getINTRVector WRITE setINTRVector)
-    ///TRAP interrupt flag/latch
-    Q_PROPERTY(bool TRAP READ isTRAPRequested WRITE setTRAPRequest)
-    ///RST 7.5 interrupt flag/latch
-    Q_PROPERTY(bool RST7_5 READ isRestart7_5Requested WRITE setRestart7_5Request NOTIFY restart7_5RequestStatusChanged)
-    ///RST 6.5 interrupt flag/latch
-    Q_PROPERTY(bool RST6_5 READ isRestart6_5Requested WRITE setRestart6_5Request)
-    ///RST 5.5 interrupt flag/latch
-    Q_PROPERTY(bool RST5_5 READ isRestart5_5Requested WRITE setRestart5_5Request)
-    ///RST 7.5 Mask latch (1 if disabled)
-    Q_PROPERTY(bool M7_5 READ maskRestart7_5 NOTIFY maskRestart7_5Changed)
-    ///RST 6.5 Mask latch (1 if disabled)
-    Q_PROPERTY(bool M6_5 READ maskRestart6_5 NOTIFY maskRestart6_5Changed)
-    ///RST 5.5 Mask latch (1 if disabled)
-    Q_PROPERTY(bool M5_5 READ maskRestart5_5 NOTIFY maskRestart5_5Changed)
-    ///Serial output data latch
-    Q_PROPERTY(bool SOD READ serialOutputDataLatch NOTIFY serialOutput)
-    ///Serial input data latch
-    Q_PROPERTY(bool SID READ serialInputDataLatch WRITE setSerialInputLatch)*/
-
     ///Code to be executed for each opcode (first byte; all 256 combinations). Consider this to be the micro-program
     ///memory for the 8085, if it was modelled in a microprogrammed approach.
     std::function<void()> * const microprograms;
@@ -159,9 +100,10 @@ class Processor : public QObject
     ///Flag which gets set on unused/invalid instruction use.
     volatile unsigned unused : 1;
 public:
-    /// Initializes this processor. All data storage locations (memory and all registers) are set to 0.
+    ///Initializes this processor. All data storage locations (memory and all registers) are set to 0 (except the interrupt mask
+    ///bits, which are set to 1).
     explicit Processor(QObject *parent = nullptr);
-    ///Explicit destructor required for proper inheritance to QObject
+    ///Destructor
     virtual ~Processor();
     ///Get the current value of accumulator register
     data8_t getAccumulator() const {return a;}

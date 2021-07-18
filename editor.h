@@ -30,53 +30,53 @@ furnished to do so, subject to the following conditions:
 #include <QRect>
 #include <QSize>
 
-///GUI component used to edit source code. Provides syntax and line higlighting, and line numbering.
+//For clues, the following code and editor.cpp was adapted from:
+//https://doc.qt.io/qt-5/qtwidgets-widgets-codeeditor-example.html
+//The difference lies in the names of classes used, some extra features, and that we used QPlainTextEdit instead of QRichTextEdit.
+
+///GUI component used to edit source code. Provides line highlighting and line numbering. For syntax highlighting look in
+///syntaxhighlighter.h.
 class Editor : public QPlainTextEdit {
     Q_OBJECT
 public:
-
+    ///Constructor
     Editor(QWidget *parent = nullptr);
-
+    ///Handle paint request by system for the line number area.
     void lineNumberAreaPaintEvent(QPaintEvent *event);
-
+    ///Calculate width of line number area.
     int lineNumberAreaWidth();
-
 protected:
-
+    ///Handle the event when this component is resized.
     void resizeEvent(QResizeEvent *event); //override
-
 private slots:
-
+    ///Called when the width of the line number area is updated. The parameter is unused as of yet but is supposed to get the
+    ///current number of blocks(lines).
     void updateLineNumberAreaWidth(int);
-
+    ///Called when the current line needs to be highlighted.
     void highlightCurrentLine();
-
+    ///Update line number area on edit.
     void updateLineNumberArea(const QRect &rect, int dy);
-
 public slots:
-
+    ///Called when the system detects an error in the given line number.
     void setErrorLine(int);
-
 private:
-
+    ///The sub-component used to display line numbers.
     QWidget *lineNumberArea;
-    //int errorLine;
 };
 
+///The component (sub-component of Editor) used to display line numbers.
 class LineNumberArea : public QWidget {
     Q_OBJECT
 public:
-
+    ///Constructor
     LineNumberArea(Editor *editor) : QWidget(editor), editor(editor) {}
-
+    ///Calculate (preferred) size for this component.
     QSize sizeHint() const {return QSize(editor->lineNumberAreaWidth(), 0);} //override
-
 protected:
-
+    ///Handle paint request by system for the line number area.
     void paintEvent(QPaintEvent *event) {editor->lineNumberAreaPaintEvent(event);} //override
-
 private:
-
+    ///The editor to which this line number area belongs to.
     Editor *editor;
 };
 

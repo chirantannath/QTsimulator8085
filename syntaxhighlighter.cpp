@@ -21,38 +21,47 @@ furnished to do so, subject to the following conditions:
     SOFTWARE.*/
 #include "syntaxhighlighter.h"
 #include <Qt>
+#include <QColor>
+#include <QFont>
 #include <sstream>
 
-inline QTextCharFormat charErrorFormat() {
+///Format for character errors (Tokenizer::CHAR_ERROR; unrecognized character)
+inline static QTextCharFormat charErrorFormat() {
     QTextCharFormat format;
     format.setBackground(Qt::red);
     format.setForeground(Qt::black);
     return format;
 }
-inline QTextCharFormat opcodeFormat() {
+///Format for opcode mnemonics (Tokenizer::OPCODE)
+inline static QTextCharFormat opcodeFormat() {
     QTextCharFormat format;
     format.setFontWeight(QFont::Bold);
     format.setForeground(QColor::fromRgb(0x7F, 0x00, 0xFF)); //violet
     return format;
 }
-inline QTextCharFormat pseudocodeFormat() {
+///Format for pseudocode mnemonics (Tokenizer::PSEUDOCODE)
+inline static QTextCharFormat pseudocodeFormat() {
     QTextCharFormat format;
     format.setFontWeight(QFont::Bold);
     format.setForeground(Qt::darkRed);
     return format;
 }
-inline QTextCharFormat identifierFormat() {
+///Format for identifiers (Tokenizer::IDENTIFIER)
+inline static QTextCharFormat identifierFormat() {
     QTextCharFormat format;
     format.setForeground(Qt::darkGreen);
     return format;
 }
-inline QTextCharFormat numberFormat() {
+///Format for numbers (Tokenizer::NUMBER)
+inline static QTextCharFormat numberFormat() {
     QTextCharFormat format;
     format.setForeground(Qt::darkYellow);
     return format;
 }
-#define hexNumberFormat() numberFormat()
-inline QTextCharFormat commentFormat() {
+///Format for hexadecimal numbers (Tokenizer::HEXNUMBER)
+#define hexNumberFormat() numberFormat() //use the same as for Tokenizer::NUMBER
+///Format for comments (Tokenizer::COMMENT)
+inline static QTextCharFormat commentFormat() {
     QTextCharFormat format;
     format.setFontItalic(true);
     format.setForeground(Qt::gray);
@@ -60,7 +69,7 @@ inline QTextCharFormat commentFormat() {
 }
 
 SyntaxHighlighter::SyntaxHighlighter(QTextDocument *parent) : QSyntaxHighlighter(parent) {
-    QTextCharFormat defaultFormat;
+    QTextCharFormat defaultFormat; //The default appearance
     highlightingRules[Tokenizer::CHAR_ERROR] = charErrorFormat();
     highlightingRules[Tokenizer::STREAM_ERROR] = defaultFormat; //should not happen
     highlightingRules[Tokenizer::END_OF_FILE] = defaultFormat; //should be caught
@@ -76,10 +85,10 @@ SyntaxHighlighter::SyntaxHighlighter(QTextDocument *parent) : QSyntaxHighlighter
     highlightingRules[Tokenizer::COMMENT] = commentFormat();
 }
 void SyntaxHighlighter::highlightBlock(const QString &text) {
-    //we know text will be a single line.
+    //we know text will be a single line. Blocks are single lines in QPlainTextEdit.
     const std::string stdText = text.toStdString();
     std::stringstream stream(stdText); Tokenizer tok(stream);
-    int oldIndex = 0;
+    int oldIndex = 0; //The index at which the previous token ended (and the next token will start)
     do {
         tok.getNextToken();
         if(tok.ttype == Tokenizer::CHAR_ERROR) {

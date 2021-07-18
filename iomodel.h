@@ -29,31 +29,32 @@ furnished to do so, subject to the following conditions:
 #include <QVariant>
 #include "processor.h"
 
+///Model for table of I/O ports to and from the 8085.
 class IOTableModel : public QAbstractTableModel {
     Q_OBJECT
 public:
-
-    explicit IOTableModel(Processor *proc = nullptr, QObject *parent = nullptr);
-
+    ///Constructor.
+    explicit IOTableModel(Processor *proc, QObject *parent = nullptr);
+    ///Flags for each cell or header.
     Qt::ItemFlags flags(const QModelIndex &index) const; //override
-
+    ///Data for each cell.
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const; //override
-
+    ///Number of rows = 16.
     int rowCount(const QModelIndex &parent = QModelIndex()) const; //override
-
+    ///Number of columns = 16.
     int columnCount(const QModelIndex &parent = QModelIndex()) const; //override
-
+    ///Header data. Columns are from 0 to 9, A to F; and rows are the higher-significant digits for port addresses
+    ///(00, 10, 20, ... E0, F0)
     QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const; //override
-
+    ///Set port data.
     bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole); //override
 private slots:
-
+    ///Called when I/O port data got updated outside of the table.
     void ioPortUpdated(ioaddr_t address);
-
+    ///Called when I/O ports are reset outside of the table.
     void ioPortsReset();
-
 private:
-
+    ///Processor of which I/O ports are to be modelled as a table.
     Processor *processor;
 };
 

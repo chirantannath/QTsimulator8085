@@ -34,65 +34,59 @@ furnished to do so, subject to the following conditions:
 #include "commdefs.h"
 #include "assembler.h"
 
+///Table that displays debug information (a list of assembler.h/Instruction objects).
 class DebugTableModel : public QAbstractTableModel {
     Q_OBJECT
-
+    ///Index of the row that is highlighted (separate from the user selecting something). This is used to indicate the current
+    ///position of program counter.
     int highlightedIndex = -1;
-
+    ///Get column header data.
     static QVariant columnHeader(int column, int role) {
         static const char *columns[] = {"Address", "Label", "Instruction", "Operand", "B1", "B2", "B3"};
         static const char *columnHelp[] = {"Address of instruction in memory", "Label for this instruction line", "Instruction",
                                           "Operand for this instruction", "Byte 1 for this instruction", "Byte 2 for this instruction, if any",
-                                          "Byte 3 for this instruction, if any"};
+                                          "Byte 3 for this instruction, if any"}; //Column descriptions for you
         switch(role) {
-
         case Qt::DisplayRole: return QVariant(QString(columns[column]));
-
         case Qt::WhatsThisRole:
         case Qt::AccessibleDescriptionRole:
         case Qt::ToolTipRole: return QVariant(QString(columnHelp[column]));
-
         case Qt::TextAlignmentRole: return QVariant(Qt::AlignCenter);
-
         default: return QVariant();
         }
     }
-
+    ///Get row header data.
     QVariant rowHeader(int row, int role) const {
         switch(role) {
-
-        case Qt::DisplayRole: return QVariant(list[row].lineNumber);
-
+        case Qt::DisplayRole: return QVariant(list[row].lineNumber); //Row header is line number
         case Qt::BackgroundRole: return (row == highlightedIndex) ? QVariant(constructHighlightBrush()) : QVariant();
-
         default: return QVariant();
         }
     }
-
+    ///Construct brush (background texture) for highlighting. See highlightedIndex.
     static QBrush constructHighlightBrush() {
         QBrush brush;
         brush.setStyle(Qt::Dense3Pattern);
         brush.setColor(QColor::fromRgbF(0.75, 0.25, 0.25, 0.5)); //adjust as needed
         return brush;
     }
-
 public:
-
+    ///Constructor. vec is the vector holding all Instructions to be viewed by the table referencing this model.
     explicit DebugTableModel(QObject *parent = nullptr, const std::vector<Instruction> &vec = std::vector<Instruction>());
-
+    ///Number of rows = list.size()
     int rowCount(const QModelIndex &parent = QModelIndex()) const; //override
-
+    ///Number of columns = 7.
     int columnCount(const QModelIndex &parent = QModelIndex()) const; //override
-
+    ///Data for a cell.
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const; //override
-
+    ///Data for a header (row or column). Calls either rowHeader or columnHeader.
     QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const; //override
-
+    ///Return current highlighted index; may be -1.
     int getHighlighedIndex() const {return highlightedIndex;}
-
+    ///The list displayed by this model. Although this is NOT const; it should be treated as such.
     std::vector<Instruction> list; //Do not change. Construct a new object everytime this is changed.
 public slots:
-
+    ///Set current highlighted index. Set to -1 if highlighting is to be disabled.
     void setHighlightedIndex(int index);
 };
 

@@ -27,9 +27,9 @@ pkgver() {
 	printf ".%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
 }
 
-#prepare() {
-#	
-#}
+prepare() {
+	git checkout tags/$pkgver	
+}
 
 build() {
 	cd $srcdir/$gitdir

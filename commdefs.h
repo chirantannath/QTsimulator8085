@@ -80,14 +80,17 @@ struct StringInsensitive {
 };
 
 #include <QString>
-
-extern const char HEX_DIGITS[17]; //1 extra for null
-
+///Store digits from 0 to 9, A to Z. One extra for NULL.
+extern const char DIGITS[37]; //1 extra for null
+///Get a 0-padded 2-digit hexadecimal representation for value.
 QString getHex8(data8_t value);
-
+///Get a 0-padded 4-digit hexadecimal representation for value.
 QString getHex16(data16_t value);
-
+///Get "0" or "1" according to whether bit at position <position> in value is 0 or 1 respectively. Positions are counted from 0
+///from least-significant bit position.
 QString getBinDigit(data8_t value, int position);
+///Convert value into a string representation with given base {min 2, max 36, digits are from 0 to 9, A to Z.}
+std::string unsignedNumber(unsigned long long value, unsigned short base=10);
 
 ///Pack two 8-bit values into a 16-bit value (most significant byte first)
 #define PACK(higher, lower) ((((higher) << 8) | (lower)) & 0xFFFFu)

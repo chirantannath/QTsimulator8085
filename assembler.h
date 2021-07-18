@@ -87,15 +87,19 @@ struct SyntaxError : public QException {
     const unsigned columnNumber;
     ///Character position at which the error occured.
     const int position;
-    ///Error message (always an in-program hardcoded string)
-    const char * const what;
+    ///Error message. In previous versions this was a const char *. We change it to std::string for extensibility.
+    const std::string what;
     ///Default constructor
     SyntaxError() : lineNumber(0u), columnNumber(0u), position(0u), what("") {};
     ///Constructor with correct parameters
     SyntaxError(unsigned lineNumber, unsigned columnNumber, int position, const char *const what) :
         lineNumber(lineNumber), columnNumber(columnNumber), position(position), what(what) {}
+    SyntaxError(unsigned lineNumber, unsigned columnNumber, int position, const std::string &what) :
+        lineNumber(lineNumber), columnNumber(columnNumber), position(position), what(what) {}
     ///Convenience constructor to take current state from a tokenizer
     inline SyntaxError(const Tokenizer &tok, const char *const what);
+    ///Convenience constructor to take current state from a tokenizer
+    inline SyntaxError(const Tokenizer &tok, const std::string &what);
     ///Default copy constructor
     SyntaxError(const SyntaxError &o) = default;
     ///Virtual destructor required for interop with Qt.

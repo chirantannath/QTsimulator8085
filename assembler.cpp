@@ -333,8 +333,7 @@ LineTranslator::LineTranslator(Tokenizer &tok)  : tok(tok) {
 
     //Format of ORG is this:
     // # ORG <16-bit address number>
-    //Indicates the following instruction lines will be put starting from the given address. Note that the Assembler class does
-    //NOT do any overlap checking (if relocation of such instructions overwrites any previous instruction written)
+    //Indicates the following instruction lines will be put starting from the given address.
     pseudocodeProcessors.insert({"ORG", [&](Instruction &i, const char *) {//For #ORG pseudocode.
         i.code = &ORG;
         ignoreWhitespaces();
@@ -352,6 +351,11 @@ LineTranslator::LineTranslator(Tokenizer &tok)  : tok(tok) {
         ignoreWhitespaces();
     }});
 
+    //Format for DATA is this:
+    // # DATA <16-bit address>  <8-bit number> <8-bit number> <8-bit number> ...
+    //The above statement ignores any #ORG statements. Example:
+    // #DATA 2200H 12H, 23H, 2DH, 21H
+    //puts byte 12H in address 2200H, 23H in 2201H, 2DH in 2202H, and 21H in 2202H.
     pseudocodeProcessors.insert({"DATA", [&](Instruction &i, const char *) {
         i.code = &DATA;
         ignoreWhitespaces();
@@ -393,22 +397,23 @@ LineTranslator::LineTranslator(Tokenizer &tok)  : tok(tok) {
 }
 Instruction LineTranslator::translateOneLine() {
     Instruction i; i.lineNumber = tok.lineNumber;
-    std::function<void(Instruction &, const char *)> caller;
-    std::string name; const char *cptr;
+    std::string name; //temporary
     ignoreWhitespaces();
+    //if we have a comment or a newline or eof; we skip to the end. This is an empty line.
     if(tok.ttype == Tokenizer::COMMENT || tok.ttype == Tokenizer::NEWLINE || tok.ttype == Tokenizer::END_OF_FILE)
         //Return empty expression identifier if this is a comment or an empty line. We jump to the end for this.
         goto translationEnd;
+    //Lines beginning with # indicate pseudocode identification.
     if(tok.ttype == Tokenizer::SEPARATOR && tok.token[0] == '#') {
         //Pseudocode
         ignoreWhitespaces();
         //There should be pseudocode here
         if(tok.ttype != Tokenizer::PSEUDOCODE) throw SyntaxError(tok, "Expected pseudocode");
-        name = std::string(tok.token); cptr = name.c_str();
-        caller = pseudocodeProcessors.find(cptr)->second;
-        caller(i, cptr);
+        name = std::string(tok.token); //copy name
+        pseudocodeProcessors[name.c_str()](i, name.c_str()); //This initializes i.code, i.operand and i.extraOperands (if needed)
         goto translationEnd;
     }
+    //Lines beginning with any other alphanumeric sequence (identifiers) may indicate labels
     if(tok.ttype == Tokenizer::IDENTIFIER) {
         //Identifiers at the start to indicate labels. Make sure it's a label
         i.label = std::string(tok.token); //force copy
@@ -418,17 +423,18 @@ Instruction LineTranslator::translateOneLine() {
             throw SyntaxError(tok, "Expected \':\'");
         ignoreWhitespaces(); //go to next token, hopefully an opcode mnemonic.
     }
-    //There should be an opcode mnemonic here
+    //Now we will get an opcode mnemonic.
     if(tok.ttype == Tokenizer::OPCODE) {
         //We would need to translate the rest of the line according to the mnemonic given.
-        name = std::string(tok.token); cptr = name.c_str();
-        caller = mnemonicProcessors.find(cptr)->second; //This initializes i.code and i.operand.
-        caller(i, cptr);
+        name = std::string(tok.token); //copy name
+        mnemonicProcessors[name.c_str()](i, name.c_str()); //This initializes i.code and i.operand.
         ignoreWhitespaces(); //advance to end of line
     }
     else throw SyntaxError(tok, "Expected opcode mnemonic");
 translationEnd:
+    //At the end we can have a comment.
     if(tok.ttype == Tokenizer::COMMENT || tok.ttype == Tokenizer::WHITESPACE) ignoreWhitespaces();
+    //Instructions must be terminated by newline or EOF.
     if(tok.ttype != Tokenizer::END_OF_FILE && tok.ttype != Tokenizer::NEWLINE)
         throw SyntaxError(tok, "Expected end of line or end of file");
     return i;
@@ -490,9 +496,12 @@ Assembler::Assembler(Processor *proc) : QObject(proc), processor(proc), in(nullp
 }
 #include <algorithm>
 #include <QCoreApplication>
+#include <unordered_map>
 void Assembler::doAssembly() {
-    Tokenizer tok(*in); LineTranslator translator(tok); memaddr_t targetOffset = 0;
+    Tokenizer tok(*in); LineTranslator translator(tok);
+    memaddr_t targetOffset = 0; //where to put the next address. We start at 0 unless specified otherwise.
     std::map<std::string, size_t, StringInsensitive> labelTable; //table for labels to instructions (index references stored)
+    std::unordered_map<unsigned, size_t> addressTable; //Table for addresses assigned to each instruction. Used for checking address overlap.
     instructions.clear();
     //Put addresses to instructions
     do {
@@ -500,9 +509,11 @@ void Assembler::doAssembly() {
         Instruction i = translator.translateOneLine();
         if(i.code == nullptr) continue;
         else if(i.code->isPseudocode) {
-            pseudocodeProcessors.find(i.code)->second(i, targetOffset); continue;}
+            pseudocodeProcessors[i.code](i, targetOffset); continue;}
+        std::unordered_map<unsigned, size_t>::iterator overlap = addressTable.find(targetOffset);
+        if(overlap != addressTable.end()) throw SyntaxError(i.lineNumber, 0, 0, "Address overlap with instruction at line " + unsignedNumber(instructions[overlap->second].lineNumber));
         i.address = targetOffset;
-        instructions.push_back(i);
+        instructions.push_back(i); addressTable[i.address] = instructions.size()-1u;
         targetOffset = (targetOffset + i.code->bytesRequired) & 0xFFFFu;
         if(!i.label.empty()) {
             if(labelTable.find(i.label) != labelTable.end())

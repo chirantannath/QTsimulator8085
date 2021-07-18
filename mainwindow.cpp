@@ -195,13 +195,10 @@ MainWindow::MainWindow(QWidget *parent)
     interruptEnableStatusChanged();
     interruptAcknowledgeStatusChanged();
 
+    //Show the UI that we want to show on first visit
     ui->leftWidget->setCurrentIndex(0); ui->rightWidget->setCurrentIndex(0); newFile();
 }
-
-MainWindow::~MainWindow()
-{
-    delete ui;
-}
+MainWindow::~MainWindow(){delete ui;}
 
 //protected
 void MainWindow::closeEvent(QCloseEvent *evt) {
@@ -221,7 +218,7 @@ void MainWindow::assemble() {
     processor->resetAll();
     assembler->in = new std::stringstream(ui->source->toPlainText().toStdString());
     ui->sourceTab->setDisabled(true); //source disabled while assembling
-    ui->debugTab->setDisabled(true);
+    ui->debugTab->setDisabled(true); //debug disabled while assembling
     ui->memoryTab->setDisabled(true); //memory disabled while assembling
     emit __fireAssemblerEvent();
 }
@@ -232,6 +229,7 @@ void MainWindow::assemblyFinished() {
     ui->memoryTab->setDisabled(false);
     if(currentDebugTableModel != emptyDebugTableModel) currentDebugTableModel->deleteLater();
     currentDebugTableModel = new DebugTableModel(this, assembler->instructions);
+    //For convenience set ui->runTarget to the lowest address.
     if(assembler->instructions.size() > 0) ui->runTarget->setText(QString::number(assembler->instructions[0].address, 16));
     else ui->runTarget->setText("");
     runTargetUpdated();
@@ -383,6 +381,7 @@ saveFileAsRetry:
     QFileInfo current(name);
     QFile file(current.absoluteFilePath());
     if(!file.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate)) {
+        //We check it here instead of calling isWritable() because the file may not exist yet.
         QMessageBox::critical(this, tr("Error!"),
                               tr("The selected file ")+current.absoluteFilePath()+tr(" is not writable."),
                               QMessageBox::Ok, QMessageBox::Ok);
