@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
     QApplication a(argc, argv); //create application
     QApplication::setApplicationName("QTsimulator8085");
     QApplication::setApplicationDisplayName("QTsimulator8085");
-    QApplication::setApplicationVersion("v0.2.0alpha"); //Try replicating Git tag name
+    QApplication::setApplicationVersion("v0.1.1alpha"); //Try replicating Git tag name
     QApplication::setOrganizationName("Jadavpur University"); //I'm out of options LOL
     QApplication::setOrganizationDomain("jaduniv.edu.in");
     MainWindow w; //create main window

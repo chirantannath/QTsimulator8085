@@ -3,8 +3,8 @@
 
 pkgname=qtsimulator8085-git
 gitdir=QTsimulator8085
-pkgver=v0.1.0alpha
-pkgrel=10
+pkgver=v0.1.1alpha
+pkgrel=11
 pkgdesc="An 8085 simulator developed using C++11/Qt5"
 arch=('x86_64' 'i686')
 url="https://github.com/chirantannath/QTsimulator8085"
@@ -21,13 +21,14 @@ options=()
 noextract=()
 md5sums=('SKIP')
 
-pkgver() {
-	cd $srcdir/$gitdir
+#pkgver() {
+#	cd $srcdir/$gitdir
 #	"$(git describe --long | sed 's/\([^-]*-\)g/r\1/;s/-/./g')" 
-	printf ".%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
-}
+#	printf ".%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+#}
 
 prepare() {
+	cd $srcdir/$gitdir
 	git checkout tags/$pkgver	
 }
 
