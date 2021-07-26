@@ -4,6 +4,7 @@
 #include <QMainWindow>
 #include <QString>
 #include <QCloseEvent>
+#include <QSettings>
 #include <random>
 #include "commdefs.h"
 #include "opcodes.h"
@@ -13,6 +14,7 @@
 #include "iomodel.h"
 #include "debugtable.h"
 #include "syntaxhighlighter.h"
+#include "finddialog.h"
 
 //We will use Qt's file handling features because they correctly handle various file encodings (UTF-8 or ISOxxx, etc...)
 #include <QFileInfo>
@@ -46,6 +48,8 @@ private slots:
     void assemblyFinished();
     ///Assembly resulted in an error.
     void assemblyError(SyntaxError ex);
+    ///User requested a line in source to go to
+    void goToLine();
     ///ui->runTarget field has been updated
     void runTargetUpdated();
     ///Clear debug table.
@@ -82,6 +86,11 @@ private slots:
     void saveFile();
     ///User requested to save file As...
     void saveFileAs();
+    ///User toggled full screen check box menu.
+    void fullScreen(bool);
+
+    ///User requested a font change.
+    void font();
 
     ///Fired when the accumulator register is changed.
     void accumulatorChanged();
@@ -131,6 +140,10 @@ private slots:
     void halted();
     ///Start processor to run program
     void runOneShot();
+
+    ///Check if currentlyOpenedFile was modified and offer to save. Returns false if entire operation was cancelled.
+    bool checkUnsaved();
+
 signals:
     //WARNING: TREAT THE FOLLOWING AS PRIVATE API
     ///Fire event to signal assembler to begin assembling.
@@ -139,21 +152,21 @@ signals:
     void __fireOneShot();
 private:
     ///UI management object
-    Ui::MainWindow *ui;
+    Ui::MainWindow * const ui;
     ///Processor (execution engine)
-    Processor *processor;
+    Processor * const processor;
+    ///Assembler engine
+    Assembler * const assembler;
     ///Table model for displaying memory to user
-    MemoryTableModel *memTable;
+    MemoryTableModel * const memTable;
     ///Table model for displaying I/O ports to user
-    IOTableModel *ioTable;
+    IOTableModel * const ioTable;
     ///A default model for the debugging information table (ui->debugTable) which is empty.
     DebugTableModel * const emptyDebugTableModel;
-    ///Table model for displaying debugging information to user
-    DebugTableModel *currentDebugTableModel;
-    ///Assembler engine
-    Assembler *assembler;
+    ///Table model for displaying debugging information to user.
+    DebugTableModel *currentDebugTableModel; //Not const because can change
     ///Syntax highlighter engine
-    SyntaxHighlighter *highlighter;
+    SyntaxHighlighter *highlighter; //Not const because it depends upon components initialized AFTER const initialization
     ///Currently opened file info
     QFileInfo currentlyOpenedFile;
     ///Has the file been modified in this application?
@@ -161,8 +174,10 @@ private:
     ///Did the last assembly result in an error?
     unsigned lastAssemblyErrored : 1;
     ///Random number generator
-    std::default_random_engine rng;
-    ///Check if currentlyOpenedFile was modified and offer to save. Returns false if entire operation was cancelled.
-    bool checkUnsaved();
+    std::default_random_engine rng; //Not const because internal states change.
+    ///Application settings
+    QSettings * const settings;
+    ///Find dialog (NOT const because depends upon ui->source)
+    FindDialog *findDialog;
 };
 #endif // MAINWINDOW_H

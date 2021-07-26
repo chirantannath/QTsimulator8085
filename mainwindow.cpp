@@ -9,12 +9,16 @@
 #include <QList>
 #include <QScreen>
 #include <QAction>
+#include <QDir>
 #include <QFile>
 #include <QFileDialog>
 #include <QIODevice>
 #include <QTextStream>
 #include <QModelIndex>
 #include <QMessageBox>
+#include <QInputDialog>
+#include <QClipboard>
+#include <QFontDialog>
 #include <vector>
 #include <chrono>
 #include "mainwindow.h"
@@ -22,8 +26,12 @@
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
-    , ui(new Ui::MainWindow), emptyDebugTableModel(new DebugTableModel(this)), isFileModified(0)
+    , ui(new Ui::MainWindow), processor(new Processor(this)), assembler(new Assembler(processor)),
+      memTable(new MemoryTableModel(processor, processor)), ioTable(new IOTableModel(processor, processor)),
+      emptyDebugTableModel(new DebugTableModel(this)), isFileModified(0), settings(new QSettings(this))
 {
+    //Call 'uic mainwindow.ui' and look at the contents of the generated file. UIC is a tool available in the Qt system alongwith
+    //QMake and MOC.
     ui->setupUi(this);
     const int largeLimit = QGuiApplication::primaryScreen()->size().width();
     ui->splitter->setSizes(QList<int>({largeLimit, largeLimit})); //setSizes is relative
@@ -34,18 +42,15 @@ MainWindow::MainWindow(QWidget *parent)
 
     We use event progress polling (QCoreApplication::processEvents()) instead to keep the application responsive.
     */
-    processor = new Processor(this);
-    assembler = new Assembler(processor);
+    findDialog = new FindDialog(this, ui->source);
     highlighter = new SyntaxHighlighter(ui->source->document());
     connect(this, &MainWindow::__fireAssemblerEvent, assembler, &Assembler::assemble);
     connect(assembler, &Assembler::assemblyFinished, this, &MainWindow::assemblyFinished);
     connect(assembler, &Assembler::assemblyError, this, &MainWindow::assemblyError);
 
     //Memory and I/O tables
-    memTable = new MemoryTableModel(processor, processor);
     ui->memTableView->setModel(memTable);
     ui->memTableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
-    ioTable = new IOTableModel(processor, processor);
     ui->ioTableView->setModel(ioTable);
     ui->ioTableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
 
@@ -89,19 +94,29 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionOpen_Source_File, &QAction::triggered, this, &MainWindow::openFile);
     connect(ui->actionSave_Source_File, &QAction::triggered, this, &MainWindow::saveFile);
     connect(ui->actionSave_Source_File_As, &QAction::triggered, this, &MainWindow::saveFileAs);
-    connect(ui->actionFull_Screen, &QAction::toggled, this, [&](bool flag)
-    {
-        setWindowFlag(Qt::FramelessWindowHint, flag);
-        if(flag) {showFullScreen();} else {showNormal();}
-    });
+    connect(ui->actionFull_Screen, &QAction::toggled, this, &MainWindow::fullScreen);
     connect(ui->actionExit, &QAction::triggered, this, &MainWindow::close);
 
-    connect(ui->actionAssemble, &QAction::triggered, ui->assembleButton, &QPushButton::clicked);
+    connect(ui->source, &Editor::undoAvailable, ui->actionUndo, &QAction::setEnabled);
+    connect(ui->source, &Editor::redoAvailable, ui->actionRedo, &QAction::setEnabled);
+    connect(ui->source, &Editor::copyAvailable, ui->actionCut, &QAction::setEnabled); //cut and copy follow together
+    connect(ui->source, &Editor::copyAvailable, ui->actionCopy, &QAction::setEnabled);
+    connect(QApplication::clipboard(), &QClipboard::changed, this,
+            [&](QClipboard::Mode) {ui->actionPaste->setEnabled(ui->source->canPaste());});
+    connect(ui->actionUndo, &QAction::triggered, ui->source, &Editor::undo);
+    connect(ui->actionRedo, &QAction::triggered, ui->source, &Editor::redo);
+    connect(ui->actionCut, &QAction::triggered, ui->source, &Editor::cut);
+    connect(ui->actionCopy, &QAction::triggered, ui->source, &Editor::copy);
+    connect(ui->actionPaste, &QAction::triggered, ui->source, &Editor::paste);
+    connect(ui->actionSelect_All, &QAction::triggered, ui->source, &Editor::selectAll);
+    connect(ui->actionFind_Replace, &QAction::triggered, this, [&](){findDialog->show(); findDialog->setFocus();});
+    connect(ui->actionGo_to_Line, &QAction::triggered, this, &MainWindow::goToLine);
 
     connect(ui->actionAbout, &QAction::triggered, this,
             [&](){QMessageBox::about(this, tr("About QTSimulator8085"), tr("An 8085 simulator developed using C++/Qt."));});
     connect(ui->actionAbout_Qt, &QAction::triggered, &QApplication::aboutQt);
 
+    connect(ui->actionAssemble, &QAction::triggered, ui->assembleButton, &QPushButton::clicked);
     connect(ui->actionStep_One_Instruction, &QAction::triggered, ui->stepButton, &QPushButton::clicked);
     connect(ui->actionExecute_Assembled, &QAction::triggered, ui->oneShot, &QPushButton::clicked);
     connect(ui->actionExecute_At, &QAction::triggered, this, [&](){
@@ -116,11 +131,14 @@ MainWindow::MainWindow(QWidget *parent)
     });
     connect(ui->stepButton, &QPushButton::clicked, processor, &Processor::stepNextInstruction);
     connect(ui->oneShot, &QPushButton::clicked, this, &MainWindow::runOneShot);
+    connect(ui->runFromTarget, &QPushButton::clicked, this, [&](){runTargetUpdated(); runOneShot();});
     connect(this, &MainWindow::__fireOneShot, processor, &Processor::runFull);
     connect(ui->haltButton, &QPushButton::clicked, processor, &Processor::haltExecution);
     connect(processor, &Processor::halted, this, &MainWindow::halted);
     connect(processor, &Processor::unusedInstruction, this,
             [&](data8_t value){ui->statusbar->showMessage(tr("Unused instruction ") + QString::number(value, 16) + tr(" encountered"));});
+
+    connect(ui->actionFont, &QAction::triggered, this, &MainWindow::font);
 
     connect(ui->findTarget, &QLineEdit::editingFinished, this, [&](){
         unsigned target = ui->findTarget->text().toUInt(nullptr, 16);
@@ -169,6 +187,12 @@ MainWindow::MainWindow(QWidget *parent)
     random_t final_seed; seeder.generate(&final_seed, (&final_seed)+1); rng = std::default_random_engine(final_seed);
 
     //fire events to initialize
+    ui->actionUndo->setEnabled(false); //Initially disabled
+    ui->actionRedo->setEnabled(false);
+    ui->actionCut->setEnabled(false);
+    ui->actionCopy->setEnabled(false);
+    ui->actionPaste->setEnabled(ui->source->canPaste());
+
     ui->sid->setChecked(processor->serialInputDataLatch());
     ui->trap->setChecked(processor->isTRAPRequested());
     ui->r7_5->setChecked(processor->isRestart7_5Requested());
@@ -197,6 +221,22 @@ MainWindow::MainWindow(QWidget *parent)
 
     //Show the UI that we want to show on first visit
     ui->leftWidget->setCurrentIndex(0); ui->rightWidget->setCurrentIndex(0); newFile();
+
+    //Settings initialization
+    resize(settings->value("mainwindow/size", size()).value<QSize>());
+    move(settings->value("mainwindow/pos", pos()).value<QPoint>());
+    fullScreen(settings->value("mainwindow/fullscreen", false).value<bool>());
+
+    if(settings->contains("splitter/sizes/size")) {
+        QList<int> sizes; int length; sizes.reserve(length = settings->beginReadArray("splitter/sizes"));
+        for(int i = 0; i < length; i++) {settings->setArrayIndex(i); sizes.append(settings->value("value").value<int>());}
+        settings->endArray();
+        ui->splitter->setSizes(sizes);
+    }
+
+    QDir::setCurrent(settings->value("directory", QDir::homePath()).value<QString>());
+
+    ui->source->setFont(settings->value("source/font", ui->source->font()).value<QFont>());
 }
 MainWindow::~MainWindow(){delete ui;}
 
@@ -205,6 +245,19 @@ void MainWindow::closeEvent(QCloseEvent *evt) {
     //do actions here
     if(!checkUnsaved()) {evt->ignore(); return;}
     processor->haltExecution();
+
+    //Store settings
+    settings->setValue("mainwindow/size", size());
+    settings->setValue("mainwindow/pos", pos());
+    settings->setValue("mainwindow/fullscreen", isFullScreen());
+
+    settings->beginWriteArray("splitter/sizes", ui->splitter->sizes().size());
+    for(int i = 0; i < ui->splitter->sizes().size(); i++) {settings->setArrayIndex(i); settings->setValue("value", ui->splitter->sizes().at(i));}
+    settings->endArray();
+
+    settings->setValue("directory", QDir::currentPath());
+    settings->setValue("source/font", ui->source->font());
+    settings->sync();
     QMainWindow::closeEvent(evt);
 }
 
@@ -214,9 +267,7 @@ void MainWindow::runOneShot() {
     ui->statusbar->showMessage(tr("Processor running..."));
     emit __fireOneShot();
 }
-void MainWindow::halted() {
-    ui->statusbar->showMessage(tr("Processor execution halted"));
-}
+void MainWindow::halted() {ui->statusbar->showMessage(tr("Processor execution halted"));}
 
 #include <vector>
 #include <sstream>
@@ -273,6 +324,13 @@ void MainWindow::assemblyError(SyntaxError ex) {
     ui->source->setErrorLine(ex.lineNumber);
     ui->leftWidget->setCurrentWidget(ui->sourceTab);
     ui->statusbar->showMessage(constructAssemblyError(ex));
+}
+void MainWindow::goToLine() {
+    QTextCursor cursor = ui->source->textCursor(); bool ok;
+    int line = QInputDialog::getInt(this, tr("Go to Line"), tr("Line Number:"), cursor.blockNumber()+1, 1, ui->source->document()->lineCount(), 1, &ok);
+    if(!ok) return;
+    cursor.setPosition(ui->source->document()->findBlockByLineNumber(line-1).position());
+    ui->source->setTextCursor(cursor);
 }
 void MainWindow::sidToggled(bool value) {
     processor->setSerialInputLatch(value);
@@ -348,7 +406,7 @@ void MainWindow::newFile() {
 void MainWindow::openFile() {
     if(!checkUnsaved()) return;
 openFileRetry:
-    QString name = QFileDialog::getOpenFileName(this, tr("Open Source File"), QString(),
+    QString name = QFileDialog::getOpenFileName(this, tr("Open Source File"), QDir::currentPath(),
                                                 tr("8085 Assembly Source Files (*.asm);;All Files (*.*)"));
     if(name.isNull()) return; //operation canncelled.
     QFileInfo current(name);
@@ -364,6 +422,7 @@ openFileRetry:
     ui->source->setPlainText(QTextStream(&file).readAll()); ui->source->document()->setModified(false); fileModified(false);
     file.close();
     setWindowTitle(currentlyOpenedFile.fileName() + tr(": QTSimulator8085"));
+    QDir::setCurrent(currentlyOpenedFile.dir().absolutePath());
 }
 void MainWindow::saveFile() {
     if(!currentlyOpenedFile.isFile()) {saveFileAs(); return;}
@@ -383,7 +442,7 @@ void MainWindow::saveFile() {
 void MainWindow::saveFileAs() {
     if(currentlyOpenedFile.isFile() && !checkUnsaved()) return; //cancelled
 saveFileAsRetry:
-    QString name = QFileDialog::getSaveFileName(this, tr("Save Source File"), QString(),
+    QString name = QFileDialog::getSaveFileName(this, tr("Save Source File"), QDir::currentPath(),
                                                 tr("8085 Assembly Source Files (*.asm);;All Files (*.*)"));
     if(name.isNull()) return; //operation cancelled.
     QFileInfo current(name);
@@ -400,6 +459,16 @@ saveFileAsRetry:
     currentlyOpenedFile = current;
     setWindowTitle(currentlyOpenedFile.fileName() + tr(": QTSimulator8085"));
     ui->source->document()->setModified(false); fileModified(false);
+    QDir::setCurrent(currentlyOpenedFile.dir().absolutePath());
+}
+void MainWindow::fullScreen(bool flag) {
+    setWindowFlag(Qt::FramelessWindowHint, flag);
+    if(flag) {showFullScreen();} else {showNormal();}
+}
+void MainWindow::font() {
+    bool ok;
+    QFont font = QFontDialog::getFont(&ok, ui->source->font(), this, tr("Choose Editor Font"));
+    if(ok) ui->source->setFont(font);
 }
 void MainWindow::accumulatorChanged() {
     ui->accumulatorFull->setText(getHex8(processor->getAccumulator()));

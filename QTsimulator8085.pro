@@ -11,6 +11,7 @@ SOURCES += \
     commdefs.cpp \
     debugtable.cpp \
     editor.cpp \
+    finddialog.cpp \
     iomodel.cpp \
     main.cpp \
     mainwindow.cpp \
@@ -24,6 +25,7 @@ HEADERS += \
     commdefs.h \
     debugtable.h \
     editor.h \
+    finddialog.h \
     iomodel.h \
     mainwindow.h \
     memorymodel.h \
@@ -32,6 +34,7 @@ HEADERS += \
     syntaxhighlighter.h
 
 FORMS += \
+    finddialog.ui \
     mainwindow.ui
 
 # Default rules for deployment.

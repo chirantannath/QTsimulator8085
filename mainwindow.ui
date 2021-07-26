@@ -27,7 +27,7 @@
       </property>
       <widget class="QTabWidget" name="leftWidget">
        <property name="currentIndex">
-        <number>0</number>
+        <number>1</number>
        </property>
        <widget class="QWidget" name="sourceTab">
         <attribute name="title">
@@ -89,7 +89,7 @@
            <item>
             <widget class="QLabel" name="label_55">
              <property name="text">
-              <string>Run At (hex):</string>
+              <string>Run Target (hex):</string>
              </property>
             </widget>
            </item>
@@ -126,7 +126,14 @@
            <item>
             <widget class="QPushButton" name="oneShot">
              <property name="text">
-              <string>Run</string>
+              <string>Run From Address in PC</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="runFromTarget">
+             <property name="text">
+              <string>Run From Run Target</string>
              </property>
             </widget>
            </item>
@@ -3219,8 +3226,32 @@
     <addaction name="actionAbout"/>
     <addaction name="actionAbout_Qt"/>
    </widget>
+   <widget class="QMenu" name="menuEdit">
+    <property name="title">
+     <string>Edit</string>
+    </property>
+    <addaction name="actionUndo"/>
+    <addaction name="actionRedo"/>
+    <addaction name="separator"/>
+    <addaction name="actionCut"/>
+    <addaction name="actionCopy"/>
+    <addaction name="actionPaste"/>
+    <addaction name="separator"/>
+    <addaction name="actionSelect_All"/>
+    <addaction name="separator"/>
+    <addaction name="actionFind_Replace"/>
+    <addaction name="actionGo_to_Line"/>
+   </widget>
+   <widget class="QMenu" name="menuOptions">
+    <property name="title">
+     <string>Options</string>
+    </property>
+    <addaction name="actionFont"/>
+   </widget>
    <addaction name="menuFile"/>
+   <addaction name="menuEdit"/>
    <addaction name="menuBuild"/>
+   <addaction name="menuOptions"/>
    <addaction name="menuHelp"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
@@ -3342,6 +3373,80 @@
    </property>
    <property name="shortcut">
     <string>F10</string>
+   </property>
+  </action>
+  <action name="actionUndo">
+   <property name="text">
+    <string>Undo</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Z</string>
+   </property>
+  </action>
+  <action name="actionRedo">
+   <property name="text">
+    <string>Redo</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Y</string>
+   </property>
+  </action>
+  <action name="actionCut">
+   <property name="text">
+    <string>Cut</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+X</string>
+   </property>
+  </action>
+  <action name="actionCopy">
+   <property name="text">
+    <string>Copy</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+C</string>
+   </property>
+  </action>
+  <action name="actionPaste">
+   <property name="text">
+    <string>Paste</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+V</string>
+   </property>
+  </action>
+  <action name="actionDelete">
+   <property name="text">
+    <string>Delete</string>
+   </property>
+  </action>
+  <action name="actionSelect_All">
+   <property name="text">
+    <string>Select All</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+A</string>
+   </property>
+  </action>
+  <action name="actionFont">
+   <property name="text">
+    <string>Font...</string>
+   </property>
+  </action>
+  <action name="actionFind_Replace">
+   <property name="text">
+    <string>Find and Replace...</string>
+   </property>
+   <property name="shortcut">
+    <string notr="true">Ctrl+F</string>
+   </property>
+  </action>
+  <action name="actionGo_to_Line">
+   <property name="text">
+    <string>Go to Line...</string>
+   </property>
+   <property name="shortcut">
+    <string notr="true">Ctrl+G</string>
    </property>
   </action>
  </widget>
