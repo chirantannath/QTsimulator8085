@@ -2758,7 +2758,7 @@
               </font>
              </property>
              <property name="text">
-              <string>Interrupt Acknowledged?</string>
+              <string>INTR Acknowledged?</string>
              </property>
             </widget>
            </item>

@@ -289,7 +289,7 @@ void MainWindow::assemblyFinished() {
     if(currentDebugTableModel != emptyDebugTableModel) currentDebugTableModel->deleteLater();
     currentDebugTableModel = new DebugTableModel(this, assembler->instructions);
     //For convenience set ui->runTarget to the lowest address.
-    if(assembler->instructions.size() > 0) ui->runTarget->setText(QString::number(assembler->instructions[0].address, 16));
+    if(assembler->instructions.size() > 0) ui->runTarget->setText(getHex16(assembler->instructions[0].address));
     else ui->runTarget->setText("");
     runTargetUpdated();
     ui->debugTableView->setModel(currentDebugTableModel);

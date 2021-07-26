@@ -2124,12 +2124,15 @@ bool Processor::stepNextInstruction() {
             pc = 0x002Cu; emit programCounterChanged();
         }
         else if (intr) {
+            //INTA signal is sent ONLY on INTR; not for the other nonvectored interrupts.
+            inta = 1u; emit interruptAcknowledgeStatusChanged(); QCoreApplication::processEvents(); //send this immediately
             sp--; sp &= 0xFFFFu; memory[sp] = (pc >> 8) & 0xFFu;
             emit memoryBlockUpdated(sp, 1u); if(sp == PACK(h, l)) emit MChanged();
             sp--; sp &= 0xFFFFu; memory[sp] = pc & 0xFFu;
             emit memoryBlockUpdated(sp, 1u); if(sp == PACK(h, l)) emit MChanged();
             emit stackPointerChanged();
             pc = (intrVec << 3) & 0xFFFFu; emit programCounterChanged();
+            inta = 0u; emit interruptAcknowledgeStatusChanged(); QCoreApplication::processEvents(); //send this immediately
         }
     }
     emit stepped();
