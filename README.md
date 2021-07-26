@@ -109,7 +109,7 @@ This is to help you get started on *understanding* this source code so that you 
 
 - How to program the 8085 and how the 8085 behaves to various internal and external conditions
 - C++; including a knowledge of STL, pointers, pointers to functions, and lambda expressions
-- The Qt C++ Library and API, including how to build Qt applications, usage of QMake, UIC and MOC, Qt GUI and Widgets, and the Qt signal-slot mechanism. [Qt Documentation](https://doc.qt.io/ Qt Documentation) helped me a lot in this regard.
+- The Qt C++ Library and API, including how to build Qt applications, usage of QMake, UIC and MOC, Qt GUI and Widgets, and the Qt signal-slot mechanism ([Qt Documentation](https://doc.qt.io/ "Qt Documentation") helped me a lot in this regard)
 - QT Creator (although not an absolute; this should ease the development process for this project. In the very least, use QT Designer or a similar suite to display the Qt UI files.)
 
 Each symbol defined in the C++ source and header files contains a short description of its use. You will want to look at the following files (recommended in the given order):
