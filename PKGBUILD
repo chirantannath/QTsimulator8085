@@ -3,8 +3,8 @@
 
 pkgname=qtsimulator8085-git
 gitdir=QTsimulator8085
-pkgver=v0.1.1alpha
-pkgrel=11
+pkgver=v0.1.2alpha
+pkgrel=12
 pkgdesc="An 8085 simulator developed using C++11/Qt5"
 arch=('x86_64' 'i686')
 url="https://github.com/chirantannath/QTsimulator8085"

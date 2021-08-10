@@ -2098,7 +2098,6 @@ bool Processor::stepNextInstruction() {
         pc = 0x0024u; emit programCounterChanged();
     }
     else if(ie) {//Only do the next checks if interrupts are enabled
-        ie = 0u; //interrupts are disabled on recognising one
         if(!m7_5 && rst7_5) {
             sp--; sp &= 0xFFFFu; memory[sp] = (pc >> 8) & 0xFFu;
             emit memoryBlockUpdated(sp, 1u); if(sp == PACK(h, l)) emit MChanged();
@@ -2106,6 +2105,7 @@ bool Processor::stepNextInstruction() {
             emit memoryBlockUpdated(sp, 1u); if(sp == PACK(h, l)) emit MChanged();
             emit stackPointerChanged();
             pc = 0x003Cu; emit programCounterChanged();
+            ie = 0u; emit interruptEnableStatusChanged(); //interrupts are disabled on recognising one
         }
         else if (!m6_5 && rst6_5) {
             sp--; sp &= 0xFFFFu; memory[sp] = (pc >> 8) & 0xFFu;
@@ -2114,6 +2114,7 @@ bool Processor::stepNextInstruction() {
             emit memoryBlockUpdated(sp, 1u); if(sp == PACK(h, l)) emit MChanged();
             emit stackPointerChanged();
             pc = 0x0034u; emit programCounterChanged();
+            ie = 0u; emit interruptEnableStatusChanged(); //interrupts are disabled on recognising one
         }
         else if (!m5_5 && rst5_5) {
             sp--; sp &= 0xFFFFu; memory[sp] = (pc >> 8) & 0xFFu;
@@ -2122,6 +2123,7 @@ bool Processor::stepNextInstruction() {
             emit memoryBlockUpdated(sp, 1u); if(sp == PACK(h, l)) emit MChanged();
             emit stackPointerChanged();
             pc = 0x002Cu; emit programCounterChanged();
+            ie = 0u; emit interruptEnableStatusChanged(); //interrupts are disabled on recognising one
         }
         else if (intr) {
             //INTA signal is sent ONLY on INTR; not for the other nonvectored interrupts.
@@ -2133,6 +2135,7 @@ bool Processor::stepNextInstruction() {
             emit stackPointerChanged();
             pc = (intrVec << 3) & 0xFFFFu; emit programCounterChanged();
             inta = 0u; emit interruptAcknowledgeStatusChanged(); QCoreApplication::processEvents(); //send this immediately
+            ie = 0u; emit interruptEnableStatusChanged(); //interrupts are disabled on recognising one
         }
     }
     emit stepped();
