@@ -63,7 +63,7 @@ void Editor::highlightCurrentLine() {
 
     if(!isReadOnly()) {
         QTextEdit::ExtraSelection selection;
-        QColor lineColor = QColor(Qt::yellow).lighter(160);
+        QColor lineColor = QColor(palette().window().color().red(), palette().window().color().green(), 0, 125).lighter(100);
         selection.format.setBackground(lineColor);
         selection.format.setProperty(QTextFormat::FullWidthSelection, true);
         selection.cursor = textCursor();
@@ -76,7 +76,7 @@ void Editor::setErrorLine(int value) {
     QList<QTextEdit::ExtraSelection> extraSelections;
     if(value < 1) highlightCurrentLine(); //just call normal
     QTextEdit::ExtraSelection selection;
-    QColor redColor = QColor(Qt::red).lighter();
+    QColor redColor = QColor(palette().window().color().red(), 0, 0, 125).lighter();
     selection.format.setBackground(redColor);
     selection.format.setProperty(QTextFormat::FullWidthSelection, true);
     selection.cursor = textCursor();

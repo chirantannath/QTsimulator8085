@@ -43,7 +43,6 @@ inline static QTextCharFormat opcodeFormat() {
 inline static QTextCharFormat pseudocodeFormat() {
     QTextCharFormat format;
     format.setFontWeight(QFont::Bold);
-    format.setForeground(Qt::darkRed);
     return format;
 }
 ///Format for identifiers (Tokenizer::IDENTIFIER)
@@ -67,6 +66,7 @@ inline static QTextCharFormat commentFormat() {
     format.setForeground(Qt::gray);
     return format;
 }
+//inline static QColor XOR(const QColor &a, const QColor &b) {return QColor((a.red() ^ b.red()) & 0xFF, (a.green() ^ b.green()) & 0xFF, (a.blue() ^ b.blue()) & 0xFF, (a.alpha() ^ b.alpha()) & 0xFF);}
 
 SyntaxHighlighter::SyntaxHighlighter(QTextDocument *parent) : QSyntaxHighlighter(parent) {
     QTextCharFormat defaultFormat; //The default appearance
