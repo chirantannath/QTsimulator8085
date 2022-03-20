@@ -45,7 +45,9 @@ jobs:
             - run: ldd ./release/QTsimulator8085
             - name: Remove unecessary files
               run: find . \( -name "moc_*" -or -name "*.o" -or -name "*.h" -or -name "qrc_*" -or -name "Makefile*" -or -name "*.a" \) -exec rm {} \;
-
+            
+            - name: Copy Linux specific files
+              run: cp -r ${{ github.workspace }}/linux/* ${{ github.workspace }}/release
             - name: Create AppImage
               run: |
                   wget -c -nv "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage"
