@@ -1,5 +1,5 @@
 name: deploy-release
-
+#We will not cache anything. It does not work correctly as of now.
 on:
     push:
         branches: [master]
@@ -19,17 +19,17 @@ jobs:
 
         steps:
             - uses: actions/checkout@v2
-            - name: Cache Qt
-              id: cache-qt
-              uses: actions/cache@v1
-              with:
-                  path: "${{ github.workspace }}/Qt/"
-                  key: ${{ runner.os }}-QtCache-v5
+            #- name: Cache Qt
+            #  id: cache-qt
+            #  uses: actions/cache@v1
+            #  with:
+            #      path: "${{ github.workspace }}/Qt/"
+            #      key: ${{ runner.os }}-QtCache-v5
             - name: Install Qt
               uses: jurplel/install-qt-action@v2
               with:
                   version: "5.15.2"
-                  cached: ${{ steps.cache-qt.outputs.cache-hit }}
+                  #cached: ${{ steps.cache-qt.outputs.cache-hit }}
                   dir: ${{ github.workspace }}/Qt/
             - name: Create release directory
               run: mkdir release
@@ -72,12 +72,12 @@ jobs:
         steps:
             - uses: actions/checkout@v2
             - uses: ilammy/msvc-dev-cmd@v1
-            - name: Cache Qt
-              id: cache-qt
-              uses: actions/cache@v1
-              with:
-                  path: "${{ github.workspace }}/qt/"
-                  key: ${{ runner.os }}-Qt_cache
+            #- name: Cache Qt
+            #  id: cache-qt
+            #  uses: actions/cache@v1
+            #  with:
+            #      path: "${{ github.workspace }}/qt/"
+            #      key: ${{ runner.os }}-Qt_cache
             - name: Install Qt
               uses: jurplel/install-qt-action@v2
               with:
@@ -87,7 +87,7 @@ jobs:
                   arch: "win64_msvc2019_64"
                   dir: "${{ github.workspace }}/qt/"
                   install-deps: "true"
-                  cached: ${{ steps.cache-qt.outputs.cache-hit }}
+                  #cached: ${{ steps.cache-qt.outputs.cache-hit }}
                   setup-python: "true"
                   tools: "tools_ifw,4.0.0,qt.tools.ifw.40 tools_qtcreator,4.13.2-0,qt.tools.qtcreator"
 
