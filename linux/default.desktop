@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=QTsimulator8085
+Exec=QTsimulator8085
+Icon=default
+Comment=An 8085 simulator developed using C++11/Qt5
+Terminal=false
+Categories=Education;Development;Building;Debugging;IDE;Qt;
