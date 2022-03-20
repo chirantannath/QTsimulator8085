@@ -64,7 +64,7 @@ jobs:
               uses: actions/upload-artifact@v2.2.4
               with:
                   name: linux-build-artifact
-                  path: "release/Application-*-x86_64.AppImage"
+                  path: "release/QTsimulator8085-*-x86_64.AppImage"
 
     windows-build:
         runs-on: windows-2019
