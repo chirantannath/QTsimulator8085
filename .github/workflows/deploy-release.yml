@@ -1,0 +1,142 @@
+name: deploy-release
+
+on:
+    push:
+        branches: [master]
+        paths:
+            - "**/*.cpp"
+            - "**/*.ui"
+            - "**/*.h"
+            - "**/*.pro"
+            - "**/*.pri"
+            - ".github/workflows/deploy-release.yml"
+            - "linux/*"
+    workflow_dispatch:
+
+jobs:
+    linux-build:
+        runs-on: ubuntu-18.04
+
+        steps:
+            - uses: actions/checkout@v2
+            - name: Cache Qt
+              id: cache-qt
+              uses: actions/cache@v1
+              with:
+                  path: "${{ github.workspace }}/Qt/"
+                  key: ${{ runner.os }}-QtCache-v5
+            - name: Install Qt
+              uses: jurplel/install-qt-action@v2
+              with:
+                  version: "5.15.2"
+                  cached: ${{ steps.cache-qt.outputs.cache-hit }}
+                  dir: ${{ github.workspace }}/Qt/
+            - name: Create release directory
+              run: mkdir release
+            - name: Run Qmake
+              run: qmake ${{ github.workspace }}/QTsimulator8085.pro -config release -spec linux-g++
+              working-directory: ./release
+            - name: Build from Makefile
+              run: make -j
+              working-directory: ./release
+
+            - run: ls -lah
+            - run: ls -lah ./release
+            - run: ldd ./release/QTsimulator8085
+            - name: Remove unecessary files
+              run: find . \( -name "moc_*" -or -name "*.o" -or -name "*.h" -or -name "qrc_*" -or -name "Makefile*" -or -name "*.a" \) -exec rm {} \;
+
+            - name: Create AppImage
+              run: |
+                  wget -c -nv "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage"
+                  chmod a+x linuxdeployqt-continuous-x86_64.AppImage
+                  QT_QPA_PLATFORM_PLUGIN_PATH=${{ env.QT_PLUGIN_PATH }}
+                  ./linuxdeployqt-continuous-x86_64.AppImage ./QTsimulator8085 -appimage -unsupported-allow-new-glibc
+                  [[ -f "qt.conf" ]] && cat qt.conf
+              working-directory: ./release
+
+            - run: ls -lah ./release
+            - run: ldd ./release/QTsimulator8085
+
+            - name: Upload a Build Artifact
+              uses: actions/upload-artifact@v2.2.4
+              with:
+                  name: linux-build-artifact
+                  path: "release/Application-*-x86_64.AppImage"
+
+    windows-build:
+        runs-on: windows-2019
+
+        steps:
+            - uses: actions/checkout@v2
+            - uses: ilammy/msvc-dev-cmd@v1
+            - name: Cache Qt
+              id: cache-qt
+              uses: actions/cache@v1
+              with:
+                  path: "${{ github.workspace }}/qt/"
+                  key: ${{ runner.os }}-Qt_cache
+            - name: Install Qt
+              uses: jurplel/install-qt-action@v2
+              with:
+                  version: "5.15.2"
+                  host: "windows"
+                  target: "desktop"
+                  arch: "win64_msvc2019_64"
+                  dir: "${{ github.workspace }}/qt/"
+                  install-deps: "true"
+                  cached: ${{ steps.cache-qt.outputs.cache-hit }}
+                  setup-python: "true"
+                  tools: "tools_ifw,4.0.0,qt.tools.ifw.40 tools_qtcreator,4.13.2-0,qt.tools.qtcreator"
+
+            - run: qmake --version
+            - name: Run Qmake
+              run: $Env:INCLUDE += ";${{ github.workspace }}/qt/Qt/5.15.2/msvc2019_64/include"; qmake
+            - run: nmake
+            - run: dir release
+            - name: Delete unecessary files
+              run: |
+                  del "moc_*" 
+                  del "*.o" 
+                  del "*.h" 
+                  del "qrc_*" 
+                  del "Makefile*" 
+                  del "*.a"
+            - run: windeployqt -h
+            - run: windeployqt --verbose 2 ${{ github.workspace }}/release/QTsimulator8085.exe
+            - shell: powershell
+              run: Compress-Archive -Path ${{ github.workspace }}/release -DestinationPath ${{ github.workspace }}/release-QTsimulator8085
+            - run: dir
+            - run: dir release
+            - name: Upload a Build Artifact
+              uses: actions/upload-artifact@v2.2.4
+              with:
+                  name: windows-build-artifact
+                  path: "release-QTsimulator8085.zip"
+
+    release:
+        needs: [linux-build, windows-build]
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Download Windows build artifact
+              uses: actions/download-artifact@v2
+              with:
+                  name: windows-build-artifact
+            - name: Download Linux build artifact
+              uses: actions/download-artifact@v2
+              with:
+                  name: linux-build-artifact
+            - run: |
+                  mv -v *.AppImage QTsimulator8085-Linux-latest-x86_64.AppImage
+                  mv -v *.zip QTsimulator8085-Windows-x86_64-latest.zip
+                  ls -lah
+            - uses: "marvinpinto/action-automatic-releases@latest"
+              with:
+                  repo_token: "${{ secrets.GITHUB_TOKEN }}"
+                  automatic_release_tag: "latest"
+                  title: "Automatic release based on ${{ github.sha }}"
+                  prerelease: true
+                  files: |
+                      QTsimulator8085-Linux-latest-x86_64.AppImage
+                      QTsimulator8085-Windows-x86_64-latest.zip
