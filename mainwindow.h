@@ -141,9 +141,12 @@ private slots:
     ///Start processor to run program
     void runOneShot();
 
+    void assemble_and_execute();
+
+    void assemble_and_runOneShot();
+
     ///Check if currentlyOpenedFile was modified and offer to save. Returns false if entire operation was cancelled.
     bool checkUnsaved();
-
 signals:
     //WARNING: TREAT THE FOLLOWING AS PRIVATE API
     ///Fire event to signal assembler to begin assembling.

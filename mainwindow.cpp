@@ -123,12 +123,11 @@ MainWindow::MainWindow(QWidget *parent)
         ui->leftWidget->setCurrentWidget(ui->debugTab);
         ui->runTarget->setFocus(Qt::OtherFocusReason);
     });
-    connect(ui->actionAssemble_and_Execute, &QAction::triggered, this, [&]() {
-        assemble();
-        if(lastAssemblyErrored) return;
-        ui->leftWidget->setCurrentWidget(ui->debugTab);
-        ui->runTarget->setFocus(Qt::OtherFocusReason);
-    });
+    connect(ui->actionAssemble_and_Execute, &QAction::triggered, this, &MainWindow::assemble_and_execute);
+    connect(ui->assembleAndExecuteButton, &QPushButton::clicked, this, &MainWindow::assemble_and_execute);
+    connect(ui->assembleRunOneShotButton, &QPushButton::clicked, this, &MainWindow::assemble_and_runOneShot);
+    connect(ui->actionAssemble_And_Run_From_First_Address, &QAction::triggered, ui->assembleRunOneShotButton, &QPushButton::clicked);
+
     connect(ui->stepButton, &QPushButton::clicked, processor, &Processor::stepNextInstruction);
     connect(ui->oneShot, &QPushButton::clicked, this, &MainWindow::runOneShot);
     connect(ui->runFromTarget, &QPushButton::clicked, this, [&](){runTargetUpdated(); runOneShot();});
@@ -263,6 +262,13 @@ void MainWindow::closeEvent(QCloseEvent *evt) {
 
 //private slots
 
+void MainWindow::assemble_and_execute() {
+    assemble();
+    if(lastAssemblyErrored) return;
+    ui->leftWidget->setCurrentWidget(ui->debugTab);
+    ui->runTarget->setFocus(Qt::OtherFocusReason);
+}
+void MainWindow::assemble_and_runOneShot() {assemble_and_execute(); runOneShot();}
 void MainWindow::runOneShot() {
     ui->statusbar->showMessage(tr("Processor running..."));
     emit __fireOneShot();
@@ -602,3 +608,4 @@ void MainWindow::maskRestart6_5Changed() {ui->m6_5->setText(QString(processor->m
 void MainWindow::maskRestart5_5Changed() {ui->m5_5->setText(QString(processor->maskRestart5_5() ? "1" : "0"));}
 void MainWindow::interruptEnableStatusChanged() {ui->ie->setText(QString(processor->isInterruptEnabled() ? "1" : "0"));}
 void MainWindow::interruptAcknowledgeStatusChanged() {ui->inta->setText(tr(processor->isInterruptAcknowledged() ? "Yes" : "No"));}
+
