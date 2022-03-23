@@ -91,16 +91,13 @@ jobs:
             - run: nmake
             - run: nmake clean
             - run: dir release
-            - name: Delete unecessary files
-              run: |
-                  del "*.cpp" 
-                  del "*.obj" 
-                  del "*.h" 
-                  del "qrc_*" 
-                  del "Makefile*" 
-                  del "*.lib"
-        	  - run: dir release
-            - run: windeployqt -h
+            - run: del "*.cpp" 
+            - run: del "*.obj" 
+            - run: del "*.h" 
+            - run: del "qrc_*" 
+            - run: del "Makefile*" 
+            - run: del "*.lib"
+        	  - run: windeployqt -h
             - run: windeployqt --verbose 2 ${{ github.workspace }}/release/QTsimulator8085.exe
             - shell: powershell
               run: Compress-Archive -Path ${{ github.workspace }}/release -DestinationPath ${{ github.workspace }}/release-QTsimulator8085
