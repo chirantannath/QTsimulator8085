@@ -268,7 +268,11 @@ void MainWindow::assemble_and_execute() {
     ui->leftWidget->setCurrentWidget(ui->debugTab);
     ui->runTarget->setFocus(Qt::OtherFocusReason);
 }
-void MainWindow::assemble_and_runOneShot() {assemble_and_execute(); runOneShot();}
+void MainWindow::assemble_and_runOneShot() {
+    assemble_and_execute();
+    if(lastAssemblyErrored) return;
+    runOneShot();
+}
 void MainWindow::runOneShot() {
     ui->statusbar->showMessage(tr("Processor running..."));
     emit __fireOneShot();
@@ -296,7 +300,12 @@ void MainWindow::assemblyFinished() {
     currentDebugTableModel = new DebugTableModel(this, assembler->instructions);
     //For convenience set ui->runTarget to the lowest address.
     if(assembler->instructions.size() > 0) ui->runTarget->setText(getHex16(assembler->instructions[0].address));
-    else ui->runTarget->setText("");
+    else {
+        ui->runTarget->setText("");
+        lastAssemblyErrored = 1;
+        ui->statusbar->showMessage(tr("No source code present"));
+        return;
+    }
     runTargetUpdated();
     ui->debugTableView->setModel(currentDebugTableModel);
     ui->leftWidget->setCurrentWidget(ui->debugTab); //go to debug page if possible
