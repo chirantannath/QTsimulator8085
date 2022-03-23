@@ -3,17 +3,9 @@ name: deploy-release
 on:
     push:
         branches: [master]
-        paths:
-            - "**/*.cpp"
-            - "**/*.ui"
-            - "**/*.h"
-            - "**/*.pro"
-            - "**/*.pri"
-            - ".github/workflows/deploy-release.yml"
-            - "linux/*"
     workflow_dispatch:
     release:
-        types: [prereleased, released]
+    types: [prereleased, released]
 
 jobs:
     linux-build:
