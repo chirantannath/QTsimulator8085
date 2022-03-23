@@ -97,7 +97,7 @@ jobs:
             - run: del "qrc_*" 
             - run: del "Makefile*" 
             - run: del "*.lib"
-        	  - run: windeployqt -h
+        - run: windeployqt -h #Why?
             - run: windeployqt --verbose 2 ${{ github.workspace }}/release/QTsimulator8085.exe
             - shell: powershell
               run: Compress-Archive -Path ${{ github.workspace }}/release -DestinationPath ${{ github.workspace }}/release-QTsimulator8085
