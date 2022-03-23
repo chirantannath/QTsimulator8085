@@ -1,8 +1,8 @@
 name: deploy-release
 #We will not cache anything. It does not work as of now.
 on:
-    push:
-        branches: [master]
+    #push:
+    #    branches: [master]
     workflow_dispatch:
     release:
         types: [prereleased, released]
