@@ -108,7 +108,7 @@ char Tokenizer::peekNextChar() {
 //LineTranslator
 
 static data8_t convertNumberByte(const Tokenizer &tok) {
-    unsigned long long x = 0x100u;
+    unsigned long long x = 0xFFu + 1;
     switch(tok.ttype) {
     case Tokenizer::BINNUMBER:
         //Custom converter required
@@ -117,27 +117,23 @@ static data8_t convertNumberByte(const Tokenizer &tok) {
             x <<= 1;
             if(tok.token[i] == '1') x |= 1u;
         }
-        if(tok.token[tok.token.length()-1] != 'b' && tok.token[tok.token.length()-1] != 'B')
-            throw SyntaxError(tok, "Expected a nonnegative number less than or equal to 255 or FFH");
         break;
     case Tokenizer::OCTNUMBER:
         std::sscanf(tok.token.c_str(), "%llo%*[oO]", &x);
-        if(x > 255u) throw SyntaxError(tok, "Expected a nonnegative number less than or equal to 255 or FFH");
         break;
     case Tokenizer::DECNUMBER:
         std::sscanf(tok.token.c_str(), "%llu%*[dD]", &x);
-        if(x > 255u) throw SyntaxError(tok, "Expected a nonnegative number less than or equal to 255 or FFH");
         break;
     case Tokenizer::HEXNUMBER:
         std::sscanf(tok.token.c_str(), "%llx%*[hH]", &x);
-        if(x > 255u) throw SyntaxError(tok, "Expected a nonnegative number less than or equal to 255 or FFH");
         break;
     default: throw SyntaxError(tok, "Expected a nonnegative number less than or equal to 255 or FFH");
     }
+    if(x > 255u) throw SyntaxError(tok, "Expected a nonnegative number less than or equal to 255 or FFH");
     return (data8_t)(x & 0xFFu);
 }
 static data16_t convertNumberWord(const Tokenizer &tok) {
-    unsigned long long x = 0x100u;
+    unsigned long long x = 0xFFFFu + 1;
     switch(tok.ttype) {
     case Tokenizer::BINNUMBER:
         //Custom converter required
@@ -146,24 +142,20 @@ static data16_t convertNumberWord(const Tokenizer &tok) {
             if(tok.token[i] == '1') x |= 1u;
             x <<= 1;
         }
-        if(tok.token[tok.token.length()-1] != 'b' && tok.token[tok.token.length()-1] != 'B')
-            throw SyntaxError(tok, "Expected a nonnegative number less than or equal to 65535 or FFFFH");
         break;
     case Tokenizer::OCTNUMBER:
         std::sscanf(tok.token.c_str(), "%llo%*[oO]", &x);
-        if(x > 255u) throw SyntaxError(tok, "Expected a nonnegative number less than or equal to 65535 or FFFFH");
         break;
     case Tokenizer::DECNUMBER:
         std::sscanf(tok.token.c_str(), "%llu%*[dD]", &x);
-        if(x > 255u) throw SyntaxError(tok, "Expected a nonnegative number less than or equal to 65535 or FFFFH");
         break;
     case Tokenizer::HEXNUMBER:
         std::sscanf(tok.token.c_str(), "%llx%*[hH]", &x);
-        if(x > 255u) throw SyntaxError(tok, "Expected a nonnegative number less than or equal to 65535 or FFFFH");
         break;
     default: throw SyntaxError(tok, "Expected a nonnegative number less than or equal to 65535 or FFFFH");
     }
-    return (data16_t)(x & 0xFFu);
+    if(x > 0xFFFFu) throw SyntaxError(tok, "Expected a nonnegative number less than or equal to 65535 or FFFFH");
+    return (data16_t)(x & 0xFFFFu);
 }
 
 LineTranslator::LineTranslator(Tokenizer &tok)  : tok(tok) {
