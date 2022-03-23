@@ -99,7 +99,7 @@ jobs:
                   del "qrc_*" 
                   del "Makefile*" 
                   del "*.lib"
-        	- run: dir release
+        	  - run: dir release
             - run: windeployqt -h
             - run: windeployqt --verbose 2 ${{ github.workspace }}/release/QTsimulator8085.exe
             - shell: powershell
