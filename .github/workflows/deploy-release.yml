@@ -13,12 +13,12 @@ jobs:
 
         steps:
             - uses: actions/checkout@v2
-            - name: Cache Qt
-              id: cache-qt
-              uses: actions/cache@v1
-              with:
-                  path: "${{ github.workspace }}/Qt/"
-                  key: ${{ runner.os }}-QtCache-v6
+            #- name: Cache Qt
+            #  id: cache-qt
+            #  uses: actions/cache@v1
+            #  with:
+            #      path: "${{ github.workspace }}/Qt/"
+            #      key: ${{ runner.os }}-QtCache-v6
             - name: Install Qt
               uses: jurplel/install-qt-action@v2
               with:
@@ -70,12 +70,12 @@ jobs:
         steps:
             - uses: actions/checkout@v2
             - uses: ilammy/msvc-dev-cmd@v1
-            - name: Cache Qt
-              id: cache-qt
-              uses: actions/cache@v1
-              with:
-                  path: "${{ github.workspace }}/qt/"
-                  key: ${{ runner.os }}-Qt_cache
+            #- name: Cache Qt
+            #  id: cache-qt
+            #  uses: actions/cache@v1
+            #  with:
+            #      path: "${{ github.workspace }}/qt/"
+            #      key: ${{ runner.os }}-Qt_cache
             - name: Install Qt
               uses: jurplel/install-qt-action@v2
               with:
