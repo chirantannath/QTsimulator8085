@@ -22,7 +22,7 @@ jobs:
             - name: Install Qt
               uses: jurplel/install-qt-action@v2
               with:
-                  version: "6.2.1"
+                  version: "5.15.2"
                   cached: ${{ steps.cache-qt.outputs.cache-hit }}
                   dir: ${{ github.workspace }}/Qt/
             - name: Create release directory
@@ -79,7 +79,7 @@ jobs:
             - name: Install Qt
               uses: jurplel/install-qt-action@v2
               with:
-                  version: "6.2.1"
+                  version: "5.15.2"
                   host: "windows"
                   target: "desktop"
                   arch: "win64_msvc2019_64"
