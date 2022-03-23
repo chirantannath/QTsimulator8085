@@ -67,8 +67,12 @@ Tokenizer::TokenType Tokenizer::getNextToken() {
         //now to see whether OPCODE, IDENTIFIER, NUMBER, or HEXNUMBER
         if(isOpcode(token.c_str())) return ttype = OPCODE;
         else if(isPseudocode(token.c_str())) return ttype = PSEUDOCODE;
-        else if(isNumber(token.c_str())) return ttype = NUMBER;
-        else if(isHexNumber(token.c_str())) return ttype = HEXNUMBER;
+        //Notice the order of calls below. Maintain this.
+        //DECNUMBER first 12D can be treated as an implicit hex number.
+        else if(isBinNumber(token.c_str())) return ttype = BINNUMBER;
+        else if(isOctNumber(token.c_str())) return ttype = OCTNUMBER;
+        else if(isDecimalNumber(token.c_str())) return ttype = DECNUMBER;
+        else if(isImplicitHexNumber(token.c_str()) || isHexNumber(token.c_str())) return ttype = HEXNUMBER;
         else return ttype = IDENTIFIER; //unrecognized alphanumeric sequences may be identifiers
     }
     //Comments
@@ -102,6 +106,65 @@ char Tokenizer::peekNextChar() {
 }
 
 //LineTranslator
+
+static data8_t convertNumberByte(const Tokenizer &tok) {
+    unsigned long long x = 0x100u;
+    switch(tok.ttype) {
+    case Tokenizer::BINNUMBER:
+        //Custom converter required
+        x = 0;
+        for(size_t i = 0; i < tok.token.length()-1; i++) {
+            x <<= 1;
+            if(tok.token[i] == '1') x |= 1u;
+        }
+        if(tok.token[tok.token.length()-1] != 'b' && tok.token[tok.token.length()-1] != 'B')
+            throw SyntaxError(tok, "Expected a nonnegative number less than or equal to 255 or FFH");
+        break;
+    case Tokenizer::OCTNUMBER:
+        std::sscanf(tok.token.c_str(), "%llo%*[oO]", &x);
+        if(x > 255u) throw SyntaxError(tok, "Expected a nonnegative number less than or equal to 255 or FFH");
+        break;
+    case Tokenizer::DECNUMBER:
+        std::sscanf(tok.token.c_str(), "%llu%*[dD]", &x);
+        if(x > 255u) throw SyntaxError(tok, "Expected a nonnegative number less than or equal to 255 or FFH");
+        break;
+    case Tokenizer::HEXNUMBER:
+        std::sscanf(tok.token.c_str(), "%llx%*[hH]", &x);
+        if(x > 255u) throw SyntaxError(tok, "Expected a nonnegative number less than or equal to 255 or FFH");
+        break;
+    default: throw SyntaxError(tok, "Expected a nonnegative number less than or equal to 255 or FFH");
+    }
+    return (data8_t)(x & 0xFFu);
+}
+static data16_t convertNumberWord(const Tokenizer &tok) {
+    unsigned long long x = 0x100u;
+    switch(tok.ttype) {
+    case Tokenizer::BINNUMBER:
+        //Custom converter required
+        x = 0;
+        for(size_t i = 0; i < tok.token.length()-1; i++) {
+            if(tok.token[i] == '1') x |= 1u;
+            x <<= 1;
+        }
+        if(tok.token[tok.token.length()-1] != 'b' && tok.token[tok.token.length()-1] != 'B')
+            throw SyntaxError(tok, "Expected a nonnegative number less than or equal to 65535 or FFFFH");
+        break;
+    case Tokenizer::OCTNUMBER:
+        std::sscanf(tok.token.c_str(), "%llo%*[oO]", &x);
+        if(x > 255u) throw SyntaxError(tok, "Expected a nonnegative number less than or equal to 65535 or FFFFH");
+        break;
+    case Tokenizer::DECNUMBER:
+        std::sscanf(tok.token.c_str(), "%llu%*[dD]", &x);
+        if(x > 255u) throw SyntaxError(tok, "Expected a nonnegative number less than or equal to 65535 or FFFFH");
+        break;
+    case Tokenizer::HEXNUMBER:
+        std::sscanf(tok.token.c_str(), "%llx%*[hH]", &x);
+        if(x > 255u) throw SyntaxError(tok, "Expected a nonnegative number less than or equal to 65535 or FFFFH");
+        break;
+    default: throw SyntaxError(tok, "Expected a nonnegative number less than or equal to 65535 or FFFFH");
+    }
+    return (data16_t)(x & 0xFFu);
+}
 
 LineTranslator::LineTranslator(Tokenizer &tok)  : tok(tok) {
     /*Mnemonic processors should catch most syntax and semantic errors.
@@ -140,8 +203,18 @@ LineTranslator::LineTranslator(Tokenizer &tok)  : tok(tok) {
     const std::function<void(Instruction &, const char *)> byteProc = [&](Instruction &i, const char *name) { //Call when the instruction requires a byte number as the operand (say 243 or 23H, etc.)
         i.code = getOpcode(name); //Wherever this occurs this has to be the first call. The name pointer points to a resource that may change unintentionally. (Rust vibes anyone?)
         ignoreWhitespaces();
-        if(tok.ttype == Tokenizer::NUMBER) {
-            unsigned x; std::sscanf(tok.token.c_str(), "%u", &x);
+        /*if(tok.ttype == Tokenizer::DECNUMBER) {
+            unsigned x; std::sscanf(tok.token.c_str(), "%u%*[dD]", &x);
+            if(x > 255u) throw SyntaxError(tok, "Expected a nonnegative number less than or equal to 255 or FFH");
+            i.operand = x & 0xFFu;
+        }
+        else if(tok.ttype == Tokenizer::BINNUMBER) {
+            unsigned x; std::sscanf(tok.token.c_str(), "%u%*[bB]", &x);
+            if(x > 255u) throw SyntaxError(tok, "Expected a nonnegative number less than or equal to 255 or FFH");
+            i.operand = x & 0xFFu;
+        }
+        else if(tok.ttype == Tokenizer::OCTNUMBER) {
+            unsigned x; std::sscanf(tok.token.c_str(), "%o%*[oO]", &x);
             if(x > 255u) throw SyntaxError(tok, "Expected a nonnegative number less than or equal to 255 or FFH");
             i.operand = x & 0xFFu;
         }
@@ -150,7 +223,8 @@ LineTranslator::LineTranslator(Tokenizer &tok)  : tok(tok) {
             if(x > 0xFFu) throw SyntaxError(tok, "Expected a nonnegative number less than or equal to FFH or 255");
             i.operand = x & 0xFFu;
         }
-        else throw SyntaxError(tok, "Expected a nonnegative number less than or equal to FFH or 255");
+        else throw SyntaxError(tok, "Expected a nonnegative number less than or equal to FFH or 255");*/
+        i.operand = convertNumberByte(tok);
     };
     mnemonicProcessors.insert({"ADI", byteProc});
     mnemonicProcessors.insert({"ACI", byteProc});
@@ -166,8 +240,8 @@ LineTranslator::LineTranslator(Tokenizer &tok)  : tok(tok) {
     const std::function<void(Instruction &, const char *)> wordProc = [&](Instruction &i, const char *name) { //Call when the instruction requires a 2-byte number as the operand (say 16384 or 2312H, etc.)
         i.code = getOpcode(name);
         ignoreWhitespaces();
-        if(tok.ttype == Tokenizer::NUMBER) {
-            unsigned long long x; std::sscanf(tok.token.c_str(), "%llu", &x);
+       /* if(tok.ttype == Tokenizer::DECNUMBER) {
+            unsigned long long x; std::sscanf(tok.token.c_str(), "%llu%*[dD]", &x);
             if(x > 65535u) throw SyntaxError(tok, "Expected a nonnegative number less than or equal to 65535 or FFFFH");
             i.operand = (data16_t)(x & 0xFFFFu);
         }
@@ -176,7 +250,8 @@ LineTranslator::LineTranslator(Tokenizer &tok)  : tok(tok) {
             if(x > 0xFFFFu) throw SyntaxError(tok, "Expected a nonnegative number less than or equal to FFFFH or 65535");
             i.operand = (data16_t)(x & 0xFFFFu);
         }
-        else throw SyntaxError(tok, "Expected a nonnegative number less than or equal to FFFFH or 65535");
+        else throw SyntaxError(tok, "Expected a nonnegative number less than or equal to FFFFH or 65535");*/
+        i.operand = convertNumberWord(tok);
     };
     mnemonicProcessors.insert({"SHLD", wordProc});
     mnemonicProcessors.insert({"LHLD", wordProc});
@@ -275,8 +350,8 @@ LineTranslator::LineTranslator(Tokenizer &tok)  : tok(tok) {
         i.code = opcodesByCode[code];
         ignoreWhitespaces();
         if(tok.ttype == Tokenizer::SEPARATOR && tok.token[0] == ',') ignoreWhitespaces(); //ignore separator if present
-        if(tok.ttype == Tokenizer::NUMBER) {
-            unsigned long long x; std::sscanf(tok.token.c_str(), "%llu", &x);
+        /*if(tok.ttype == Tokenizer::DECNUMBER) {
+            unsigned long long x; std::sscanf(tok.token.c_str(), "%llu%*[dD]", &x);
             if(x > 65535u) throw SyntaxError(tok, "Expected a nonnegative number less than or equal to 65535 or FFFFH");
             i.operand = (data16_t)(x & 0xFFFFu);
         }
@@ -285,12 +360,14 @@ LineTranslator::LineTranslator(Tokenizer &tok)  : tok(tok) {
             if(x > 0xFFFFu) throw SyntaxError(tok, "Expected a nonnegative number less than or equal to FFFFH or 65535");
             i.operand = (data16_t)(x & 0xFFFFu);
         }
-        else throw SyntaxError(tok, "Expected a nonnegative number less than or equal to FFFFH or 65535");
+        else throw SyntaxError(tok, "Expected a nonnegative number less than or equal to FFFFH or 65535");*/
+        i.operand = convertNumberWord(tok);
     }});
 
     mnemonicProcessors.insert({"MVI", [&](Instruction &i, const char *) { //Call this for the MVI instructions which takes a 1-byte register name and a 1-byte integer (eg. 134 or 22H, etc.) as arguments.
         ignoreWhitespaces(); data8_t code = 0x06u;
-        if(!(tok.ttype == Tokenizer::IDENTIFIER && tok.token.length() == 1))
+        //Register names could be identified as a hex digit.
+        if(!((tok.ttype == Tokenizer::IDENTIFIER || tok.ttype == Tokenizer::HEXNUMBER) && tok.token.length() == 1))
             throw SyntaxError(tok, "Expected a byte register name (B,C,D,E,H,L,M,A)");
         switch(tok.token[0]) {
         case 'b': case 'B': code |= (0 << 3); break; //temporary value
@@ -306,8 +383,8 @@ LineTranslator::LineTranslator(Tokenizer &tok)  : tok(tok) {
         ignoreWhitespaces();
         if(tok.ttype == Tokenizer::SEPARATOR && tok.token[0] == ',') ignoreWhitespaces(); //ignore separator if present
         i.code = opcodesByCode[code];
-        if(tok.ttype == Tokenizer::NUMBER) {
-            unsigned x; std::sscanf(tok.token.c_str(), "%u", &x);
+        /*if(tok.ttype == Tokenizer::DECNUMBER) {
+            unsigned x; std::sscanf(tok.token.c_str(), "%u%*[dD]", &x);
             if(x > 255u) throw SyntaxError(tok, "Expected a nonnegative number less than or equal to 255 or FFH");
             i.operand = x & 0xFFu;
         }
@@ -316,7 +393,8 @@ LineTranslator::LineTranslator(Tokenizer &tok)  : tok(tok) {
             if(x > 0xFFu) throw SyntaxError(tok, "Expected a nonnegative number less than or equal to FFH or 255");
             i.operand = x & 0xFFu;
         }
-        else throw SyntaxError(tok, "Expected a nonnegative number less than or equal to FFH or 255");
+        else throw SyntaxError(tok, "Expected a nonnegative number less than or equal to FFH or 255");*/
+        i.operand = convertNumberByte(tok);
     }});
 
     mnemonicProcessors.insert({"PUSH", [&](Instruction &i, const char *name) {stackProc(i, name); i.code = opcodesByCode[0xC5u | (i.operand << 4)]; i.operand = 0;}});
@@ -325,8 +403,8 @@ LineTranslator::LineTranslator(Tokenizer &tok)  : tok(tok) {
     mnemonicProcessors.insert({"RST", [&](Instruction &i, const char *) { //Call for RST instructions which take an integer from 0 to 7 inclusive.
         unsigned n;
         ignoreWhitespaces();
-        if(tok.ttype != Tokenizer::NUMBER) throw SyntaxError(tok, "Expected an integer between 0 to 7 inclusive");
-        std::sscanf(tok.token.c_str(), "%u", &n);
+        if(tok.ttype != Tokenizer::DECNUMBER) throw SyntaxError(tok, "Expected an integer between 0 to 7 inclusive");
+        std::sscanf(tok.token.c_str(), "%u%*[dD]", &n);
         if(n > 7) throw SyntaxError(tok, "Expected an integer between 0 and 7 inclusive");
         i.code = opcodesByCode[0xC7u | (n << 3)];
     }});
@@ -337,8 +415,8 @@ LineTranslator::LineTranslator(Tokenizer &tok)  : tok(tok) {
     pseudocodeProcessors.insert({"ORG", [&](Instruction &i, const char *) {//For #ORG pseudocode.
         i.code = &ORG;
         ignoreWhitespaces();
-        if(tok.ttype == Tokenizer::NUMBER) {
-            unsigned long long x; std::sscanf(tok.token.c_str(), "%llu", &x);
+        /*if(tok.ttype == Tokenizer::DECNUMBER) {
+            unsigned long long x; std::sscanf(tok.token.c_str(), "%llu%*[dD]", &x);
             if(x > 65535u) throw SyntaxError(tok, "Expected a nonnegative number less than or equal to 65535 or FFFFH");
             i.operand = (data16_t)(x & 0xFFFFu);
         }
@@ -347,7 +425,8 @@ LineTranslator::LineTranslator(Tokenizer &tok)  : tok(tok) {
             if(x > 0xFFFFu) throw SyntaxError(tok, "Expected a nonnegative number less than or equal to FFFFH or 65535");
             i.operand = (data16_t)(x & 0xFFFFu);
         }
-        else throw SyntaxError(tok, "Expected a nonnegative number less than or equal to FFFFH or 65535");
+        else throw SyntaxError(tok, "Expected a nonnegative number less than or equal to FFFFH or 65535");*/
+        i.operand = convertNumberWord(tok);
         ignoreWhitespaces();
     }});
 
@@ -360,8 +439,8 @@ LineTranslator::LineTranslator(Tokenizer &tok)  : tok(tok) {
         i.code = &DATA;
         ignoreWhitespaces();
         //expect a 16-bit number to indicate target storing address
-        if(tok.ttype == Tokenizer::NUMBER) {
-            unsigned long long x; std::sscanf(tok.token.c_str(), "%llu", &x);
+        /*if(tok.ttype == Tokenizer::DECNUMBER) {
+            unsigned long long x; std::sscanf(tok.token.c_str(), "%llu%*[dD]", &x);
             if(x > 65535u) throw SyntaxError(tok, "Expected a nonnegative number less than or equal to 65535 or FFFFH");
             i.operand = (data16_t)(x & 0xFFFFu);
         }
@@ -370,20 +449,21 @@ LineTranslator::LineTranslator(Tokenizer &tok)  : tok(tok) {
             if(x > 0xFFFFu) throw SyntaxError(tok, "Expected a nonnegative number less than or equal to FFFFH or 65535");
             i.operand = (data16_t)(x & 0xFFFFu);
         }
-        else throw SyntaxError(tok, "Expected a nonnegative number less than or equal to FFFFH or 65535");
+        else throw SyntaxError(tok, "Expected a nonnegative number less than or equal to FFFFH or 65535");*/
+        i.operand = convertNumberWord(tok);
         //Now we will parse a list of numbers
         while(true) {
-            unsigned x;
             ignoreWhitespaces(); //advance
             switch(tok.ttype) {
-            case Tokenizer::NUMBER:
-                std::sscanf(tok.token.c_str(), "%u", &x);
+            case Tokenizer::DECNUMBER: case Tokenizer::OCTNUMBER: case Tokenizer::HEXNUMBER: case Tokenizer::BINNUMBER:
+                /*std::sscanf(tok.token.c_str(), "%u%*[dD]", &x);
                 if(x > 255u) throw SyntaxError(tok, "Expected a nonnegative number less than or equal to 255 or FFH");
-                i.extraOperands.push_back(x & 0xFFu); break;
-            case Tokenizer::HEXNUMBER:
+                i.extraOperands.push_back(x & 0xFFu); break;*/
+                i.extraOperands.push_back(convertNumberByte(tok));
+            /*case Tokenizer::HEXNUMBER:
                 std::sscanf(tok.token.c_str(), "%x%*[hH]", &x);
                 if(x > 0xFFu) throw SyntaxError(tok, "Expected a nonnegative number less than or equal to FFH or 255");
-                i.extraOperands.push_back(x & 0xFFu); break;
+                i.extraOperands.push_back(x & 0xFFu); break;*/
             case Tokenizer::END_OF_FILE: case Tokenizer::NEWLINE: case Tokenizer::COMMENT: goto outOfLoop;
             case Tokenizer::SEPARATOR:
                 if(tok.token[0] != ',') throw SyntaxError(tok, "Expected \',\'");

@@ -59,6 +59,8 @@ inline static QTextCharFormat numberFormat() {
 }
 ///Format for hexadecimal numbers (Tokenizer::HEXNUMBER)
 #define hexNumberFormat() numberFormat() //use the same as for Tokenizer::NUMBER
+#define octNumberFormat() numberFormat()
+#define binNumberFormat() numberFormat()
 ///Format for comments (Tokenizer::COMMENT)
 inline static QTextCharFormat commentFormat() {
     QTextCharFormat format;
@@ -80,8 +82,10 @@ SyntaxHighlighter::SyntaxHighlighter(QTextDocument *parent) : QSyntaxHighlighter
     highlightingRules[Tokenizer::OPCODE] = opcodeFormat();
     highlightingRules[Tokenizer::PSEUDOCODE] = pseudocodeFormat();
     highlightingRules[Tokenizer::IDENTIFIER] = identifierFormat();
-    highlightingRules[Tokenizer::NUMBER] = numberFormat();
+    highlightingRules[Tokenizer::DECNUMBER] = numberFormat();
     highlightingRules[Tokenizer::HEXNUMBER] = hexNumberFormat();
+    highlightingRules[Tokenizer::OCTNUMBER] = octNumberFormat();
+    highlightingRules[Tokenizer::BINNUMBER] = binNumberFormat();
     highlightingRules[Tokenizer::COMMENT] = commentFormat();
 }
 void SyntaxHighlighter::highlightBlock(const QString &text) {

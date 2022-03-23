@@ -140,12 +140,17 @@ struct Tokenizer {
         PSEUDOCODE,
         ///Identifier; might be a register specifier or a label
         IDENTIFIER,
-        ///Decimal number (contains only digits 0-9.)
-        NUMBER,
-        ///Hexadecimal number (contains digits 0-9, a-f, A-F and ends in H or h.)
+        ///Decimal number (contains only digits 0-9; and ends in d or D.)
+        DECNUMBER,
+        ///Hexadecimal number (contains digits 0-9, a-f, A-F and may end in h or H.)
         HEXNUMBER,
         ///Comment (starts with ';' and should be followed by a NEWLINE token)
-        COMMENT
+        COMMENT,
+        //Below types have been added later.
+        ///Binary number (only 0 and 1), ends in b or B.
+        BINNUMBER,
+        ///Octal number (0 to 7), ends in o or O (letter O, not zero)
+        OCTNUMBER
     } ttype;
     ///Current line number
     unsigned lineNumber;
@@ -181,10 +186,14 @@ struct Tokenizer {
         default: return false;
         }
     }
-    ///is decimal number?
-    static bool isNumber(const char * const s) {
-        for(const char *p = s; *p != '\0'; p++) if(!std::isdigit(*p)) return false;
-        return true;
+    ///is decimal number? ends with d or D
+    static bool isDecimalNumber(const char * const s) {
+        //for(const char *p = s; *p != '\0'; p++) if(!std::isdigit(*p)) return false;
+        //return true;
+        size_t len = std::strlen(s);
+        if(len <= 1) return false;
+        for(size_t i = 0; i < (len-1u); i++) if(!std::isdigit(s[i])) return false;
+        return s[len-1] == 'd' || s[len-1] == 'D';
     }
     ///is hexadecimal number? ends with H.
     static bool isHexNumber(const char * const s) {
@@ -192,6 +201,25 @@ struct Tokenizer {
         if(len <= 1) return false;
         for(size_t i = 0; i < (len-1u); i++) if(!(std::isdigit(s[i]) || (s[i] >= 'a' && s[i] <= 'f') || (s[i] >= 'A' && s[i] <= 'F'))) return false;
         return s[len-1] == 'h' || s[len-1] == 'H';
+    }
+    static bool isImplicitHexNumber(const char * const s) {
+        size_t len = std::strlen(s);
+        if(len <= 1) return false;
+        if(!std::isdigit(s[0])) return false; //Must start with digit
+        for(size_t i = 1; i < len; i++) if(!(std::isdigit(s[i]) || (s[i] >= 'a' && s[i] <= 'f') || (s[i] >= 'A' && s[i] <= 'F'))) return false;
+        return true;
+    }
+    static bool isBinNumber(const char * const s) {
+        size_t len = std::strlen(s);
+        if(len <= 1) return false;
+        for(size_t i = 0; i < (len-1u); i++) if(!(s[i] == '0' || s[i] == '1')) return false;
+        return s[len-1] == 'b' || s[len-1] == 'B';
+    }
+    static bool isOctNumber(const char * const s) {
+        size_t len = std::strlen(s);
+        if(len <= 1) return false;
+        for(size_t i = 0; i < (len-1u); i++) if(!(s[i] >= '0' && s[i] <= '7')) return false;
+        return s[len-1] == 'o' || s[len-1] == 'O';
     }
 };
 
