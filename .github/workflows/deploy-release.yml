@@ -1,34 +1,37 @@
 name: deploy-release
-#We will not cache anything. It does not work correctly as of now.
+#We will not cache anything. It does not work as of now.
 on:
     push:
         branches: [master]
     workflow_dispatch:
     release:
-    types: [prereleased, released]
+        types: [prereleased, released]
 
 jobs:
     linux-build:
-        runs-on: ubuntu-18.04
+        runs-on: ubuntu-20.04
 
         steps:
             - uses: actions/checkout@v2
-            #- name: Cache Qt
-            #  id: cache-qt
-            #  uses: actions/cache@v1
-            #  with:
-            #      path: "${{ github.workspace }}/Qt/"
-            #      key: ${{ runner.os }}-QtCache-v5
+            - name: Cache Qt
+              id: cache-qt
+              uses: actions/cache@v1
+              with:
+                  path: "${{ github.workspace }}/Qt/"
+                  key: ${{ runner.os }}-QtCache-v6
             - name: Install Qt
               uses: jurplel/install-qt-action@v2
               with:
-                  version: "5.15.2"
-                  #cached: ${{ steps.cache-qt.outputs.cache-hit }}
+                  version: "6.2.1"
+                  cached: ${{ steps.cache-qt.outputs.cache-hit }}
                   dir: ${{ github.workspace }}/Qt/
             - name: Create release directory
               run: mkdir release
             - name: Run Qmake
-              run: qmake ${{ github.workspace }}/QTsimulator8085.pro -config release -spec linux-g++
+              run: qmake ${{ github.workspace }}/QTsimulator8085.pro -config release -spec linux-g++ CONFIG+=qtquickcompiler
+              working-directory: ./release
+            - name: Build Makefile
+              run: make Makefile qmake_all
               working-directory: ./release
             - name: Build from Makefile
               run: make -j && make -j clean
@@ -39,9 +42,10 @@ jobs:
             - run: ldd ./release/QTsimulator8085
             - name: Remove unecessary files
               run: find . \( -name "moc_*" -or -name "*.o" -or -name "*.h" -or -name "qrc_*" -or -name "Makefile*" -or -name "*.a" \) -exec rm {} \;
-            
+
             - name: Copy Linux specific files
-              run: cp -rv ${{ github.workspace }}/linux/* ${{ github.workspace }}/release
+              run: cp -r ${{ github.workspace }}/linux/* ${{ github.workspace }}/release
+
             - name: Create AppImage
               run: |
                   wget -c -nv "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage"
@@ -61,43 +65,48 @@ jobs:
                   path: "release/QTsimulator8085-*-x86_64.AppImage"
 
     windows-build:
-        runs-on: windows-2019
+        runs-on: windows-latest
 
         steps:
             - uses: actions/checkout@v2
             - uses: ilammy/msvc-dev-cmd@v1
-            #- name: Cache Qt
-            #  id: cache-qt
-            #  uses: actions/cache@v1
-            #  with:
-            #      path: "${{ github.workspace }}/qt/"
-            #      key: ${{ runner.os }}-Qt_cache
+            - name: Cache Qt
+              id: cache-qt
+              uses: actions/cache@v1
+              with:
+                  path: "${{ github.workspace }}/qt/"
+                  key: ${{ runner.os }}-Qt_cache
             - name: Install Qt
               uses: jurplel/install-qt-action@v2
               with:
-                  version: "5.15.2"
+                  version: "6.2.1"
                   host: "windows"
                   target: "desktop"
                   arch: "win64_msvc2019_64"
                   dir: "${{ github.workspace }}/qt/"
                   install-deps: "true"
-                  #cached: ${{ steps.cache-qt.outputs.cache-hit }}
+                  modules: "qtcharts qtwebengine"
+                  cached: ${{ steps.cache-qt.outputs.cache-hit }}
                   setup-python: "true"
                   tools: "tools_ifw,4.0.0,qt.tools.ifw.40 tools_qtcreator,4.13.2-0,qt.tools.qtcreator"
 
             - run: qmake --version
             - name: Run Qmake
               run: $Env:INCLUDE += ";${{ github.workspace }}/qt/Qt/5.15.2/msvc2019_64/include"; qmake
-            - run: nmake
-            - run: nmake clean
+            - name: Build from nmake
+              run: |
+                  nmake
+                  nmake clean
             - run: dir release
-            - run: del "*.cpp" 
-            - run: del "*.obj" 
-            - run: del "*.h" 
-            - run: del "qrc_*" 
-            - run: del "Makefile*" 
-            - run: del "*.lib"
-        - run: windeployqt -h #Why?
+            - name: Delete unecessary files
+              run: |
+                  del "moc_*" 
+                  del "*.obj" 
+                  del "*.h" 
+                  del "qrc_*" 
+                  del "Makefile*" 
+                  del "*.lib"
+            - run: windeployqt -h
             - run: windeployqt --verbose 2 ${{ github.workspace }}/release/QTsimulator8085.exe
             - shell: powershell
               run: Compress-Archive -Path ${{ github.workspace }}/release -DestinationPath ${{ github.workspace }}/release-QTsimulator8085
