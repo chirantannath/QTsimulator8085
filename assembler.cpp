@@ -253,9 +253,11 @@ LineTranslator::LineTranslator(Tokenizer &tok)  : tok(tok) {
     const std::function<void(Instruction &, const char *)> labelProc = [&](Instruction &i, const char *name) { //Call when the instruction takes a label as argument (jumps and calls)
         i.code = getOpcode(name);
         ignoreWhitespaces();
-        if(tok.ttype != Tokenizer::IDENTIFIER)
-            throw SyntaxError(tok, "Expected an identifier(target label)");
-        i.toLabel = tok.token;
+        try {i.operand = convertNumberWord(tok);} catch (SyntaxError const &) {
+            if(tok.ttype != Tokenizer::IDENTIFIER)
+                throw SyntaxError(tok, "Expected an identifier(target label) or address");
+            i.toLabel = tok.token;
+        }
     };
     mnemonicProcessors.insert({"JMP", labelProc});
     mnemonicProcessors.insert({"JNZ", labelProc});
@@ -395,8 +397,9 @@ LineTranslator::LineTranslator(Tokenizer &tok)  : tok(tok) {
     mnemonicProcessors.insert({"RST", [&](Instruction &i, const char *) { //Call for RST instructions which take an integer from 0 to 7 inclusive.
         unsigned n;
         ignoreWhitespaces();
-        if(tok.ttype != Tokenizer::DECNUMBER) throw SyntaxError(tok, "Expected an integer between 0 to 7 inclusive");
-        std::sscanf(tok.token.c_str(), "%u%*[dD]", &n);
+        //if(tok.ttype != Tokenizer::DECNUMBER) throw SyntaxError(tok, "Expected an integer between 0 to 7 inclusive");
+        //std::sscanf(tok.token.c_str(), "%u%*[dD]", &n);
+        n = convertNumberByte(tok);
         if(n > 7) throw SyntaxError(tok, "Expected an integer between 0 and 7 inclusive");
         i.code = opcodesByCode[0xC7u | (n << 3)];
     }});

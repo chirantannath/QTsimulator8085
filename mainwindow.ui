@@ -3124,6 +3124,8 @@
      <string>Options</string>
     </property>
     <addaction name="actionFont"/>
+    <addaction name="separator"/>
+    <addaction name="actionDisplay_Dialog_Box_on_Source_Code_Errors"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -3332,6 +3334,17 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+R</string>
+   </property>
+  </action>
+  <action name="actionDisplay_Dialog_Box_on_Source_Code_Errors">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Display Dialog Box on Source Code Errors</string>
    </property>
   </action>
  </widget>

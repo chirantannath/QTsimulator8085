@@ -204,7 +204,7 @@ struct Tokenizer {
     }
     static bool isImplicitHexNumber(const char * const s) {
         size_t len = std::strlen(s);
-        if(len <= 1) return false;
+        if(len < 1) return false;
         if(!std::isdigit(s[0])) return false; //Must start with digit
         for(size_t i = 1; i < len; i++) if(!(std::isdigit(s[i]) || (s[i] >= 'a' && s[i] <= 'f') || (s[i] >= 'A' && s[i] <= 'F'))) return false;
         return true;

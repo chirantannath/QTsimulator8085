@@ -234,8 +234,9 @@ MainWindow::MainWindow(QWidget *parent)
     }
 
     QDir::setCurrent(settings->value("directory", QDir::homePath()).value<QString>());
-
     ui->source->setFont(settings->value("source/font", ui->source->font()).value<QFont>());
+    ui->actionDisplay_Dialog_Box_on_Source_Code_Errors->setChecked(settings->value("source/displayDialogBoxOnSourceCodeErrors",
+        ui->actionDisplay_Dialog_Box_on_Source_Code_Errors->isChecked()).value<bool>());
 }
 MainWindow::~MainWindow(){delete ui;}
 
@@ -256,6 +257,7 @@ void MainWindow::closeEvent(QCloseEvent *evt) {
 
     settings->setValue("directory", QDir::currentPath());
     settings->setValue("source/font", ui->source->font());
+    settings->setValue("source/displayDialogBoxOnSourceCodeErrors", ui->actionDisplay_Dialog_Box_on_Source_Code_Errors->isChecked());
     settings->sync();
     QMainWindow::closeEvent(evt);
 }
@@ -326,6 +328,7 @@ void MainWindow::runTargetUpdated() {
 }
 #include <QTextCursor>
 #include <QTextBlock>
+#include <QMessageBox>
 void MainWindow::assemblyError(SyntaxError ex) {
     lastAssemblyErrored = 1;
     delete assembler->in;
@@ -338,7 +341,9 @@ void MainWindow::assemblyError(SyntaxError ex) {
     ui->source->setTextCursor(cursor);*/
     ui->source->setErrorLine(ex.lineNumber);
     ui->leftWidget->setCurrentWidget(ui->sourceTab);
-    ui->statusbar->showMessage(constructAssemblyError(ex));
+    QString msg(constructAssemblyError(ex));
+    ui->statusbar->showMessage(msg);
+    if(ui->actionDisplay_Dialog_Box_on_Source_Code_Errors->isChecked()) QMessageBox::critical(this, tr("Source Code Error!"), msg, QMessageBox::Ok, QMessageBox::Ok);
 }
 void MainWindow::goToLine() {
     QTextCursor cursor = ui->source->textCursor(); bool ok;
@@ -398,7 +403,6 @@ void MainWindow::fileModified(bool modified) {
     if(modified && !windowTitle().startsWith(QString("*"))) {setWindowTitle(QString("*") + windowTitle());}
     else if(!modified && windowTitle().startsWith(QString("*"))) {setWindowTitle(windowTitle().right(windowTitle().length() - 1));}
 }
-#include <QMessageBox>
 bool MainWindow::checkUnsaved() {
     if(!isFileModified) return true;
     switch(QMessageBox::question(this, tr("Save Your Changes?")
